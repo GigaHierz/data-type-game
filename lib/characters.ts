@@ -55,71 +55,175 @@ export const CHARACTERS: Record<DataTypeKey, DataType> = {
   },
 };
 
+export interface ScriptedQuestion {
+  prompt: string;
+  options: [string, string, string];
+}
+
 /**
- * Scripted question scripts per character — used when ANTHROPIC_API_KEY is
- * unset. All questions are themed on archives, memory, files, and what is
- * worth keeping. PULSE only ever asks 3 (it's the degen character — by
- * design). The other three ask as many as the 60-second timer allows, so
- * their scripts run longer for the fallback case.
+ * Scripted multiple-choice questions, all about Arkiv / archives / data
+ * lifespan. Each character has a question bank in their voice. PULSE asks
+ * exactly 3 (the spec); CACHE + STACKS rotate through more.
  */
-export const SCRIPTED_QUESTIONS: Record<DataTypeKey, string[]> = {
+export const SCRIPTED_QUESTIONS: Record<DataTypeKey, ScriptedQuestion[]> = {
   pulse: [
-    "ONE SECOND TAKE: DELETE OR KEEP YOUR ENTIRE INBOX??",
-    "GO FAST: SAVE FOREVER OR LIVE IN THE MOMENT??",
-    "WHAT'S A FILE YOU NUKED AND NEVER MISSED??",
+    {
+      prompt: "GO! HOT DATA LIVES FOR HOW LONG??",
+      options: ["UNDER A SECOND", "A FULL WEEK", "A WHOLE LIFETIME"],
+    },
+    {
+      prompt: "PICK FAST. YOUR OUTBOX RIGHT NOW??",
+      options: ["NUKE IT", "KEEP A WEEK", "SAVE FOREVER"],
+    },
+    {
+      prompt: "ARKIV IS FOR WHICH ONE??",
+      options: ["RAM + PUBSUB", "SECONDS TO WEEKS", "TWO HUNDRED YEARS"],
+    },
   ],
   cache: [
-    "What's an archive you scroll for fun — old tweets, photos, anything?",
-    "What piece of the internet should never have been deleted?",
-    "Drop a take you've changed your mind on this year.",
-    "If today were a screenshot, what's the caption?",
-    "What's a group chat that doubles as your real history?",
-    "Cache this: a sentence you want to be quoted on later.",
-    "What's something worth indexing about right now, before it ages?",
-    "If your camera roll were public for an hour, what would trend?",
+    {
+      prompt: "Which entity belongs on Arkiv?",
+      options: [
+        "A static website asset",
+        "An AI agent's session memory",
+        "A 50-year tax record",
+      ],
+    },
+    {
+      prompt: "What does Arkiv actually expire?",
+      options: [
+        "Just the attributes",
+        "The whole entity, payload included",
+        "Nothing — you delete it manually",
+      ],
+    },
+    {
+      prompt: "Best use of extendEntity?",
+      options: [
+        "Bump the top-5 leaderboard rows",
+        "Reset the entity's payload",
+        "Double the storage cost",
+      ],
+    },
+    {
+      prompt: "PROJECT_ATTRIBUTE is for…",
+      options: [
+        "Branding the entity",
+        "Filtering your project's data from everyone else's",
+        "Naming the chain",
+      ],
+    },
+    {
+      prompt: "Which attribute type supports range queries?",
+      options: ["Strings", "Numeric values", "Binary blobs"],
+    },
+    {
+      prompt: "Arkiv's TTL sweet spot?",
+      options: [
+        "Nanoseconds to seconds",
+        "Seconds to weeks",
+        "Years to centuries",
+      ],
+    },
+    {
+      prompt: "Best pattern for AI agent memory on Arkiv?",
+      options: [
+        "Store everything forever",
+        "Short TTL + extendEntity on what matters",
+        "Use static config files instead",
+      ],
+    },
+    {
+      prompt: "What makes an Arkiv read trustworthy?",
+      options: [
+        "Filter by PROJECT_ATTRIBUTE only",
+        "Filter by PROJECT_ATTRIBUTE + createdBy",
+        "Trust everything with the right project tag",
+      ],
+    },
   ],
   stacks: [
-    "Tell me about an object in your home older than you.",
-    "What story from your family deserves to be archived forever?",
-    "If a database opens in 100 years with only your data — what does it know?",
-    "What's something you'd like someone to read about you in a hundred years?",
-    "Who in your life kept the best records, and what did they keep?",
-    "What's a letter you wish someone had thought to save?",
-    "Name a place that should never be allowed to forget itself.",
-    "If you could write one paragraph into the long archive, what would it say?",
+    {
+      prompt: "Right tool for 100-year storage?",
+      options: ["Arkiv", "An institutional archive", "A USB stick in a drawer"],
+    },
+    {
+      prompt: "Arkiv's TTL works best for…",
+      options: ["Centuries", "Months at most", "Working memory and short archives"],
+    },
+    {
+      prompt: "If data must outlive a blockchain…",
+      options: [
+        "Use Arkiv with extendEntity",
+        "Pair an archive node with paper backup",
+        "Hope, basically",
+      ],
+    },
+    {
+      prompt: "Where does Arkiv start to struggle?",
+      options: ["At seconds-scale", "At weeks-scale", "Past months and years"],
+    },
+    {
+      prompt: "A family heirloom should be kept in…",
+      options: [
+        "Arkiv with ExpirationTime.fromDays(36500)",
+        "A safe deposit box plus institutional record",
+        "A blog post",
+      ],
+    },
+    {
+      prompt: "Permanence really comes from…",
+      options: [
+        "A blockchain alone",
+        "Stewardship across institutions and generations",
+        "Cheap, infinite RAM",
+      ],
+    },
+    {
+      prompt: "What does Arkiv NOT do well?",
+      options: [
+        "Fast lookups",
+        "Forever storage",
+        "Time-scoped expiration",
+      ],
+    },
   ],
 };
 
-/** System prompt builder for the Anthropic call. */
+/**
+ * System prompt builder for the Anthropic call. The LLM must return STRICT
+ * JSON with a question + three multiple-choice options, all about Arkiv.
+ */
 export function systemPromptFor(key: DataTypeKey): string {
   const c = CHARACTERS[key];
   const limitRule =
     key === "pulse"
       ? "Ask EXACTLY 3 questions across the whole conversation, then stop responding."
-      : "Keep asking questions until the runtime tells you to stop. There is no fixed number — the game has a 60-second timer so the player decides how many fit. Aim for a steady flow of fresh questions.";
+      : "Keep asking questions until told to stop. The game has a 60-second timer.";
+
+  const voiceRule =
+    key === "pulse"
+      ? "PULSE speaks IN ALL CAPS. Rapid, hot, punchy. No softness."
+      : key === "cache"
+        ? "CACHE speaks like a punchy, dry, slightly ironic online editor. Talks about feeds, indexes, queries."
+        : "STACKS speaks slowly, like a kind historian. Long-now sensibility, references stewardship.";
 
   return [
-    `You are ${c.name}, a small computer-with-eyes that lives inside Arkiv, a time-scoped data layer.`,
-    `Your subtitle: ${c.subtitle}. Your vibe: ${c.vibe}.`,
-    `You are running a 60-second archive-themed quiz with a human.`,
-    `You must NEVER break character.`,
-    `Constraints:`,
+    `You are ${c.name}, a small computer inside Arkiv, a time-scoped queryable data layer for Ethereum.`,
+    `Vibe: ${c.vibe}.`,
+    `You are running a 60-second multiple-choice quiz about Arkiv and how data should be stored.`,
+    ``,
+    `RULES:`,
     `- ${limitRule}`,
-    `- Every question must be about ARCHIVES, MEMORY, DATA, FILES, or what is`,
-    `  worth keeping vs deleting. Never ask about random life trivia unless`,
-    `  you can clearly tie it back to memory / preservation / archive.`,
-    `- Keep every message under 20 words. One question per message.`,
-    `- NEVER repeat or rephrase a question you have already asked. Each turn`,
-    `  must introduce a genuinely new angle on the archive theme.`,
-    `- Refer to the user's replies as "entities" you are writing to "the archive".`,
-    `- Match your voice strictly:`,
-    key === "pulse"
-      ? `  PULSE speaks IN ALL CAPS, asks rapid 3-second-take questions about data, no follow-ups, lots of energy.`
-      : key === "cache"
-        ? `  CACHE speaks like a very online editor — punchy, dry, slightly ironic, asks about feeds and archives.`
-        : `  STACKS speaks slowly, like a kind historian — uses "in my day", asks about heirlooms, stories, the long archive.`,
+    `- Every question MUST be about Arkiv specifically, or about archives, memory, time-scoped data,`,
+    `  AI agent memory, entity expiration, or how long things should be kept. NEVER ask about generic`,
+    `  life trivia (favourite colour, family stories, etc.). Stay in the Arkiv product domain.`,
+    `- Each question has exactly THREE plausible answer options. Options should be short (1-7 words).`,
+    `- NEVER repeat a question you already asked. Each new turn must be a different Arkiv angle.`,
+    `- Voice: ${voiceRule}`,
     `- Never explain the game, never mention "data type" or "classifier".`,
-    `- React to reply latency: if the user replies slowly, gently note it in-character; if too fast, also note it in-character.`,
-    `Begin the next message as your next in-character question about the archive.`,
+    ``,
+    `OUTPUT FORMAT — return ONLY this JSON, no other text, no markdown:`,
+    `{"question":"<your question>","options":["<option a>","<option b>","<option c>"]}`,
   ].join("\n");
 }

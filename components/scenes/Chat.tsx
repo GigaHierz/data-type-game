@@ -14,6 +14,12 @@ const LOST_THRESHOLD_MS = 20_000;
 /** Total game length. After this, the chat auto-seals regardless of how far you got. */
 const GAME_DURATION_MS = 60_000;
 
+interface ChatResponse {
+  done: boolean;
+  content: string | null;
+  options: [string, string, string] | null;
+}
+
 export function Chat({
   character,
   onComplete,
@@ -24,21 +30,16 @@ export function Chat({
   const char = CHARACTERS[character];
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [entities, setEntities] = useState<RailEntity[]>([]);
-  const [input, setInput] = useState("");
+  const [options, setOptions] = useState<[string, string, string] | null>(null);
   const [thinking, setThinking] = useState(true);
   const [agentDone, setAgentDone] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   // ms when the latest agent message landed; drives the freshness timer.
   const lastAgentAtRef = useRef<number | null>(null);
-  // Live mirrors of state so async callbacks can read the latest values
-  // without stale-closure bugs (turns/entities can both update between
-  // the agent's response landing and onComplete firing).
   const turnsRef = useRef<ChatTurn[]>([]);
   const entitiesRef = useRef<RailEntity[]>([]);
-  // Total-game countdown. Set once on mount; never reset.
   const gameStartRef = useRef<number>(Date.now());
-  // Onсе set, prevents the timeout from also firing onComplete twice.
   const completedRef = useRef(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -49,7 +50,7 @@ export function Chat({
     return () => clearInterval(id);
   }, []);
 
-  // Hard time limit: 60s and we seal no matter what.
+  // Hard 60-second limit.
   useEffect(() => {
     const id = setTimeout(() => {
       if (completedRef.current) return;
@@ -64,6 +65,7 @@ export function Chat({
   const askNext = useCallback(
     async (currentTurns: ChatTurn[]) => {
       setThinking(true);
+      setOptions(null);
       const lastUser = [...currentTurns].reverse().find((t) => t.role === "user");
       try {
         const res = await fetch("/api/chat", {
@@ -75,12 +77,10 @@ export function Chat({
             lastLatencyMs: lastUser?.latencyMs ?? null,
           }),
         });
-        const data = (await res.json()) as { done: boolean; content: string | null };
+        const data = (await res.json()) as ChatResponse;
         if (data.done || !data.content) {
           setAgentDone(true);
           setThinking(false);
-          // Read latest turns/entities from refs — by the time the agent
-          // returns "done", several setState batches may still be pending.
           setTimeout(() => {
             if (completedRef.current) return;
             completedRef.current = true;
@@ -98,6 +98,7 @@ export function Chat({
           turnsRef.current = next;
           return next;
         });
+        setOptions(data.options ?? null);
         lastAgentAtRef.current = Date.now();
       } finally {
         setThinking(false);
@@ -112,68 +113,67 @@ export function Chat({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-scroll to bottom when new turns arrive.
+  // Auto-scroll on new turns.
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [turns.length]);
 
-  const handleSend = useCallback(() => {
-    if (!input.trim() || thinking || agentDone) return;
-    const text = input.trim();
-    const latencyMs = lastAgentAtRef.current ? Date.now() - lastAgentAtRef.current : null;
-    const userTurn: ChatTurn = {
-      role: "user",
-      content: text,
-      createdAt: Date.now(),
-      latencyMs: latencyMs ?? undefined,
-    };
-    const newTurns = [...turns, userTurn];
-    turnsRef.current = newTurns;
-    setTurns(newTurns);
-    setInput("");
+  /** Selecting an option records the choice as the user's reply. */
+  const handleSelect = useCallback(
+    (text: string) => {
+      if (thinking || agentDone) return;
+      const latencyMs = lastAgentAtRef.current
+        ? Date.now() - lastAgentAtRef.current
+        : null;
+      const userTurn: ChatTurn = {
+        role: "user",
+        content: text,
+        createdAt: Date.now(),
+        latencyMs: latencyMs ?? undefined,
+      };
+      const newTurns = [...turns, userTurn];
+      turnsRef.current = newTurns;
+      setTurns(newTurns);
+      setOptions(null);
 
-    // Optimistic local entity — shows immediately as "pending".
-    const optimistic: RailEntity = {
-      ...createReplyEntity({ text, character, latencyMs }),
-      pending: true,
-      onChain: false,
-    };
-    entitiesRef.current = [...entitiesRef.current, optimistic];
-    setEntities(entitiesRef.current);
+      const optimistic: RailEntity = {
+        ...createReplyEntity({ text, character, latencyMs }),
+        pending: true,
+        onChain: false,
+      };
+      entitiesRef.current = [...entitiesRef.current, optimistic];
+      setEntities(entitiesRef.current);
 
-    // Fire the on-chain (or fallback) write in parallel. When it resolves,
-    // swap the pending entity in place.
-    void (async () => {
-      try {
-        const res = await fetch("/api/archive/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ character, text, latencyMs }),
-        });
-        if (!res.ok) return;
-        const confirmed = (await res.json()) as RailEntity;
-        // Preserve original createdAt so the TTL bar doesn't reset on swap.
-        const swapped: RailEntity = {
-          ...confirmed,
-          createdAt: optimistic.createdAt,
-          freshness: optimistic.freshness,
-          pending: false,
-        };
-        entitiesRef.current = entitiesRef.current.map((e) =>
-          e.entityKey === optimistic.entityKey ? swapped : e,
-        );
-        setEntities([...entitiesRef.current]);
-      } catch (err) {
-        // Leave the optimistic entity in place — it's still valid locally.
-        console.error("archive/create failed", err);
-      }
-    })();
+      void (async () => {
+        try {
+          const res = await fetch("/api/archive/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ character, text, latencyMs }),
+          });
+          if (!res.ok) return;
+          const confirmed = (await res.json()) as RailEntity;
+          const swapped: RailEntity = {
+            ...confirmed,
+            createdAt: optimistic.createdAt,
+            freshness: optimistic.freshness,
+            pending: false,
+          };
+          entitiesRef.current = entitiesRef.current.map((e) =>
+            e.entityKey === optimistic.entityKey ? swapped : e,
+          );
+          setEntities([...entitiesRef.current]);
+        } catch (err) {
+          console.error("archive/create failed", err);
+        }
+      })();
 
-    // Ask the next agent question.
-    askNext(newTurns);
-  }, [input, thinking, agentDone, turns, character, askNext]);
+      askNext(newTurns);
+    },
+    [thinking, agentDone, turns, character, askNext],
+  );
 
-  // Freshness countdown numbers
+  // Freshness countdown for the current question.
   const freshTimer = useMemo(() => {
     if (!lastAgentAtRef.current) return null;
     const elapsed = now - lastAgentAtRef.current;
@@ -201,7 +201,6 @@ export function Chat({
     return Math.min(100, s);
   }, [turns]);
 
-  // Total-game countdown shown in the bezel.
   const gameRemaining = Math.max(0, GAME_DURATION_MS - (now - gameStartRef.current));
   const gameLow = gameRemaining < 15_000;
 
@@ -226,7 +225,9 @@ export function Chat({
             </div>
             <div>
               <div className="font-mono text-xl tracking-widest">{char.name}</div>
-              <div className="text-xs opacity-70">{char.subtitle} · TTL {char.ttlLabel}</div>
+              <div className="text-xs opacity-70">
+                {char.subtitle} · TTL {char.ttlLabel}
+              </div>
             </div>
           </div>
 
@@ -251,37 +252,36 @@ export function Chat({
             )}
           </div>
 
-          {/* Input + freshness timer */}
+          {/* Options + freshness timer */}
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between font-mono text-[10px] tracking-widest">
               <span className={freshTimer?.cls ?? ""}>
-                {freshTimer ? `${freshTimer.label} · ${(freshTimer.remaining / 1000).toFixed(1)}s` : ""}
+                {freshTimer
+                  ? `${freshTimer.label} · ${(freshTimer.remaining / 1000).toFixed(1)}s`
+                  : ""}
               </span>
-              <span className="opacity-50">enter to send</span>
+              <span className="opacity-50">pick one — fast</span>
             </div>
-            <div className="flex items-stretch gap-2">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSend();
-                }}
-                disabled={thinking || agentDone}
-                placeholder={
-                  agentDone
-                    ? "the archive is sealing…"
-                    : "type your entity to the archive…"
-                }
-                className="flex-1 rounded border-2 border-ink bg-sand px-3 py-3 font-mono text-sm placeholder:opacity-40 focus:outline-none focus:ring-0"
-              />
-              <button
-                onClick={handleSend}
-                disabled={thinking || agentDone || !input.trim()}
-                className="rounded border-2 border-ink bg-arkiv-blue px-4 font-mono text-sm uppercase tracking-widest text-sand shadow-bezel transition active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                send ›
-              </button>
-            </div>
+            {options && !thinking && !agentDone ? (
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                {options.map((opt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSelect(opt)}
+                    className="rounded border-2 border-ink bg-sand px-3 py-3 text-left font-mono text-sm shadow-bezel transition hover:bg-stone active:translate-y-[2px] active:shadow-none"
+                  >
+                    <span className="mr-2 text-[10px] text-arkiv-blue">
+                      {String.fromCharCode(65 + i)}
+                    </span>
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded border border-dashed border-ink/30 p-3 text-center font-mono text-xs opacity-60">
+                {agentDone ? "sealing…" : "loading next question…"}
+              </div>
+            )}
           </div>
         </div>
 

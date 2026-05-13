@@ -8,5 +8,6 @@ export async function GET() {
     chainEnabled: chainEnabled(),
     walletAddress: walletAddress(),
     chain: "braga",
+    llmEnabled: !!(process.env.ANTHROPIC_API_KEY ?? process.env.CLAUDE_API_KEY),
   });
 }

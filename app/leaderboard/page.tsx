@@ -7,7 +7,13 @@ export const metadata = {
   title: "Leaderboard · Data Type Game",
 };
 
-export default function LeaderboardPage() {
+export default async function LeaderboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ name?: string }>;
+}) {
+  const params = await searchParams;
+  const name = params?.name ?? "";
   return (
     <main className="min-h-screen bg-sand">
       <div className="mx-auto max-w-3xl px-4 py-6 md:py-10">
@@ -30,7 +36,7 @@ export default function LeaderboardPage() {
               tags flash when an <code>extendEntity</code> tx confirms). Once
               you fall out of the top 5, the network forgets you on its own.
             </p>
-            <Leaderboard />
+            <Leaderboard highlightName={name} />
           </div>
         </Bezel>
         <footer className="mt-6 flex items-center justify-between font-mono text-[10px] opacity-60">

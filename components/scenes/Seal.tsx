@@ -14,8 +14,8 @@ export interface SealOutput {
 const STAGES = [
   "extracting signals…",
   "measuring reply latency…",
-  "scoring caps, hedging, emoji…",
-  "comparing against the 4 nodes…",
+  "scoring your picks…",
+  "comparing against the 3 types…",
   "compiling your data type…",
 ];
 

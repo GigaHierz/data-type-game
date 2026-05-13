@@ -4,6 +4,7 @@ import {
   CHARACTERS,
   SCRIPTED_QUESTIONS,
   systemPromptFor,
+  type ScriptedQuestion,
 } from "@/lib/characters";
 import type { DataTypeKey } from "@/lib/types";
 
@@ -14,6 +15,49 @@ interface ChatBody {
   lastLatencyMs?: number;
 }
 
+/** The user may set the key as either ANTHROPIC_API_KEY or CLAUDE_API_KEY. */
+function anthropicKey(): string | undefined {
+  return process.env.ANTHROPIC_API_KEY ?? process.env.CLAUDE_API_KEY;
+}
+
+/** Picks the next scripted MC question for the character, skipping any already asked. */
+function pickScripted(
+  character: DataTypeKey,
+  askedPrompts: Set<string>,
+): ScriptedQuestion | null {
+  const bank = SCRIPTED_QUESTIONS[character] ?? [];
+  for (const q of bank) {
+    if (!askedPrompts.has(q.prompt)) return q;
+  }
+  return null;
+}
+
+/** Parse strict-JSON output from Claude. Returns null if parse fails. */
+function parseLlmJson(text: string): ScriptedQuestion | null {
+  // Try to find a JSON object in the response, tolerating any prose around it.
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    const obj = JSON.parse(match[0]) as {
+      question?: unknown;
+      options?: unknown;
+    };
+    if (typeof obj.question !== "string") return null;
+    if (!Array.isArray(obj.options) || obj.options.length !== 3) return null;
+    if (!obj.options.every((o) => typeof o === "string" && o.length > 0)) return null;
+    return {
+      prompt: obj.question,
+      options: [obj.options[0], obj.options[1], obj.options[2]] as [
+        string,
+        string,
+        string,
+      ],
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: Request) {
   const body = (await req.json()) as ChatBody;
   const char = CHARACTERS[body.character];
@@ -21,63 +65,77 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown character" }, { status: 400 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  // Count how many agent turns have already happened — used by both branches.
   const agentTurns = body.history.filter((h) => h.role === "agent").length;
   const userTurns = body.history.filter((h) => h.role === "user").length;
+  const askedPrompts = new Set(
+    body.history.filter((h) => h.role === "agent").map((h) => h.content),
+  );
 
-  // PULSE is the only character with a hard question cap — that's the spec
-  // ("it's just three questions"). The other three ask as many as fit in the
-  // 60-second game timer; the client's hard stop seals the chat at 60s.
+  // PULSE is the only hard cap — 3 questions total. Others run until the
+  // 60-second client timer ends the game.
   if (body.character === "pulse" && agentTurns >= 3 && userTurns >= 3) {
-    return NextResponse.json({ done: true, content: null });
-  }
-  // Defensive: if the script is shorter than what's been asked (scripted-fallback
-  // path only), stop instead of repeating the last question.
-  const scriptLen = SCRIPTED_QUESTIONS[body.character]?.length ?? 0;
-  if (!process.env.ANTHROPIC_API_KEY && agentTurns >= scriptLen) {
-    return NextResponse.json({ done: true, content: null });
+    return NextResponse.json({ done: true, content: null, options: null });
   }
 
-  // Fallback: scripted questions when there is no API key.
-  if (!apiKey) {
-    const script = SCRIPTED_QUESTIONS[body.character];
-    const idx = Math.min(agentTurns, script.length - 1);
-    return NextResponse.json({ done: false, content: script[idx] });
-  }
+  const apiKey = anthropicKey();
 
-  const client = new Anthropic({ apiKey });
-  const system = systemPromptFor(body.character);
-
-  // Surface latency into the conversation as a system-side note so the
-  // model can react in-character.
-  const latencyNote =
-    body.lastLatencyMs != null
-      ? `\n[engine note: the last user reply took ${Math.round(
-          body.lastLatencyMs / 1000,
-        )}s to arrive. React to that in-character if appropriate.]`
+  // LLM-driven multiple-choice generation.
+  if (apiKey) {
+    const client = new Anthropic({ apiKey });
+    const latencyNote =
+      body.lastLatencyMs != null
+        ? `\n[engine note: last user reply took ${Math.round(
+            body.lastLatencyMs / 1000,
+          )}s.]`
+        : "";
+    const askedNote = askedPrompts.size
+      ? `\n[already asked, do NOT repeat: ${[...askedPrompts]
+          .map((p) => `"${p}"`)
+          .join(", ")}]`
       : "";
 
-  const messages = body.history.map((h) => ({
-    role: h.role === "agent" ? ("assistant" as const) : ("user" as const),
-    content: h.content,
-  }));
+    const messages = body.history.map((h) => ({
+      role: h.role === "agent" ? ("assistant" as const) : ("user" as const),
+      content: h.content,
+    }));
+    // Seed with a user-side nudge if no history (Anthropic requires a user turn first).
+    if (messages.length === 0 || messages[0].role === "assistant") {
+      messages.unshift({ role: "user", content: "ready" });
+    }
 
-  try {
-    const msg = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 120,
-      system: system + latencyNote,
-      messages,
-    });
-    const textBlock = msg.content.find((c) => c.type === "text");
-    const text = textBlock && textBlock.type === "text" ? textBlock.text : "";
-    return NextResponse.json({ done: false, content: text.trim() });
-  } catch (err) {
-    console.error("anthropic error", err);
-    // graceful fallback
-    const script = SCRIPTED_QUESTIONS[body.character];
-    const idx = Math.min(agentTurns, script.length - 1);
-    return NextResponse.json({ done: false, content: script[idx] });
+    try {
+      const msg = await client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 200,
+        system: systemPromptFor(body.character) + latencyNote + askedNote,
+        messages,
+      });
+      const textBlock = msg.content.find((c) => c.type === "text");
+      const text = textBlock && textBlock.type === "text" ? textBlock.text : "";
+      const parsed = parseLlmJson(text);
+      if (parsed) {
+        return NextResponse.json({
+          done: false,
+          content: parsed.prompt,
+          options: parsed.options,
+          source: "llm",
+        });
+      }
+      console.warn("[chat] LLM returned unparseable text, falling back to scripted:", text);
+    } catch (err) {
+      console.error("[chat] anthropic error, falling back to scripted:", err);
+    }
   }
+
+  // Scripted fallback (or primary path when no key is set).
+  const scripted = pickScripted(body.character, askedPrompts);
+  if (!scripted) {
+    return NextResponse.json({ done: true, content: null, options: null });
+  }
+  return NextResponse.json({
+    done: false,
+    content: scripted.prompt,
+    options: scripted.options,
+    source: apiKey ? "scripted-fallback" : "scripted",
+  });
 }
