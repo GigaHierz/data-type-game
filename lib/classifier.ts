@@ -15,6 +15,9 @@ export interface Signals {
   staleCount: number;
   lostCount: number;
   freshnessScore: number;
+  correctCount: number;
+  totalAnswered: number;
+  correctPct: number;
 }
 
 export interface ClassifyResult {
@@ -57,12 +60,20 @@ export function extractSignals(turns: ChatTurn[]): Signals {
   let stale = 0;
   let lost = 0;
   let freshnessScore = 0;
+  let correctCount = 0;
+  let answeredCount = 0;
   for (const t of userTurns) {
     const f = freshnessFor(t.latencyMs ?? null);
     if (f === "fresh") fresh += 1;
     else if (f === "stale") stale += 1;
     else lost += 1;
-    freshnessScore += scoreForFreshness(f);
+    // Score is only earned on correct answers — wrong replies count toward
+    // the freshness budget but not the score.
+    if (t.correct === true) {
+      freshnessScore += scoreForFreshness(f);
+      correctCount += 1;
+    }
+    if (t.correct === true || t.correct === false) answeredCount += 1;
   }
 
   const text = userTurns.map((t) => t.content).join(" ");
@@ -94,6 +105,9 @@ export function extractSignals(turns: ChatTurn[]): Signals {
     staleCount: stale,
     lostCount: lost,
     freshnessScore,
+    correctCount,
+    totalAnswered: answeredCount,
+    correctPct: answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0,
   };
 }
 

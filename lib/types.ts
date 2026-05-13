@@ -20,6 +20,8 @@ export interface ChatTurn {
   createdAt: number;
   /** for user turns: latency from the previous agent message in ms */
   latencyMs?: number;
+  /** for user turns: whether the picked option was the correct one */
+  correct?: boolean;
 }
 
 /** Phase of the 4-minute game loop. */

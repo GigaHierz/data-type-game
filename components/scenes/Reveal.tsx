@@ -1,18 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bezel } from "@/components/ui/Bezel";
 import { CharacterSprite } from "@/components/characters";
-import { EntityRail, type RailEntity } from "@/components/archive/EntityRail";
+import { type RailEntity } from "@/components/archive/EntityRail";
 import { Leaderboard } from "@/components/leaderboard/Leaderboard";
 import type { ClassifyResult } from "@/lib/classifier";
 
-const AUTONAV_MS = 8_000;
-
 export function Reveal({
   result,
-  entities,
+  entities: _entities,
   dataTypeEntity,
   playerName,
   onPlayAgain,
@@ -24,37 +21,11 @@ export function Reveal({
   onPlayAgain: () => void;
 }) {
   const router = useRouter();
-  const [showBoard, setShowBoard] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(Math.round(AUTONAV_MS / 1000));
   const { type, arcadeScore, signals, rationale } = result;
-
-  // Flip the right panel to the leaderboard 2s after reveal lands, so the
-  // player sees their row appear without having to click anything.
-  useEffect(() => {
-    const id = setTimeout(() => setShowBoard(true), 2000);
-    return () => clearTimeout(id);
-  }, []);
-
-  // Auto-navigate to the full leaderboard page after AUTONAV_MS, with the
-  // player's name as a query param so the page can highlight their row.
-  useEffect(() => {
-    const tick = setInterval(
-      () => setSecondsLeft((s) => Math.max(0, s - 1)),
-      1000,
-    );
-    const id = setTimeout(() => {
-      const q = playerName ? `?name=${encodeURIComponent(playerName)}` : "";
-      router.push(`/leaderboard${q}`);
-    }, AUTONAV_MS);
-    return () => {
-      clearInterval(tick);
-      clearTimeout(id);
-    };
-  }, [router, playerName]);
 
   const verdictByType: Record<typeof type.key, string> = {
     pulse:
-      "You burned through it. The archive could barely write you down. Hot data lives in RAM — Arkiv isn't your tool here, and honestly that's a compliment.",
+      "You burned through it. Arkiv could barely write you down. Hot data lives in RAM — Arkiv isn't your tool here, and honestly that's a compliment.",
     cache:
       "Fast, structured, verifiable. You are the textbook Arkiv entity — fresh enough to feel live, structured enough to keep. Agent memory, leaderboards, indexed feeds. This is the sweet spot.",
     stacks:
@@ -78,7 +49,7 @@ export function Reveal({
   return (
     <Bezel
       title="ARKIV · REVEAL"
-      status={showBoard ? "leaderboard" : "result.json"}
+      status="result.json"
     >
       <div
         className="crt relative grid min-h-[640px] grid-cols-1 md:grid-cols-[1fr_320px]"
@@ -121,6 +92,11 @@ export function Reveal({
                 value={`${(signals.medianLatencyMs / 1000).toFixed(1)}s`}
                 ink={swatch.ink}
               />
+              <Stat
+                label="CORRECT"
+                value={`${signals.correctCount}/${signals.totalAnswered} · ${signals.correctPct}%`}
+                ink={swatch.ink}
+              />
               <Stat label="MOOD" value={type.mood} ink={swatch.ink} />
               <Stat label="TRENDS WITH" value={type.trendsWith} ink={swatch.ink} />
             </div>
@@ -150,6 +126,13 @@ export function Reveal({
                 const q = playerName ? `?name=${encodeURIComponent(playerName)}` : "";
                 router.push(`/leaderboard${q}`);
               }}
+              className="rounded border-2 border-current bg-transparent px-4 py-2 font-mono text-sm uppercase tracking-widest"
+              style={{ borderColor: swatch.ink, color: swatch.ink }}
+            >
+              full leaderboard →
+            </button>
+            <button
+              onClick={onPlayAgain}
               className="rounded border-2 px-4 py-2 font-mono text-sm uppercase tracking-widest shadow-bezel transition active:translate-y-[2px] active:shadow-none"
               style={{
                 borderColor: swatch.ink,
@@ -157,21 +140,8 @@ export function Reveal({
                 color: swatch.ink,
               }}
             >
-              leaderboard now ›
+              play again ›
             </button>
-            <button
-              onClick={onPlayAgain}
-              className="rounded border-2 border-current bg-transparent px-4 py-2 font-mono text-sm uppercase tracking-widest"
-              style={{ borderColor: swatch.ink, color: swatch.ink }}
-            >
-              play again
-            </button>
-            <span
-              className="ml-1 font-mono text-[10px] tracking-widest opacity-70"
-              style={{ color: swatch.ink }}
-            >
-              → leaderboard in {secondsLeft}s
-            </span>
           </div>
         </div>
 
@@ -213,11 +183,7 @@ export function Reveal({
               </div>
             )}
             <div className="w-full">
-              {showBoard ? (
-                <Leaderboard highlightName={playerName} compact />
-              ) : (
-                <EntityRail entities={entities} title="STILL IN THE ARCHIVE" />
-              )}
+              <Leaderboard highlightName={playerName} compact />
             </div>
           </div>
         </div>

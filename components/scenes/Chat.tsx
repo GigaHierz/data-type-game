@@ -9,15 +9,21 @@ import { createReplyEntity, freshnessFor } from "@/lib/arkiv-store";
 import type { ChatTurn, DataTypeKey } from "@/lib/types";
 
 /** Game timing — keep in sync with FRESH_THRESHOLD_MS / LOST_THRESHOLD_MS in lib/arkiv-store.ts. */
-const FRESH_WINDOW_MS = 10_000;
-const LOST_THRESHOLD_MS = 20_000;
+const FRESH_WINDOW_MS = 20_000;
+const LOST_THRESHOLD_MS = 35_000;
 /** Total game length. After this, the chat auto-seals regardless of how far you got. */
-const GAME_DURATION_MS = 60_000;
+const GAME_DURATION_MS = 90_000;
 
 interface ChatResponse {
   done: boolean;
   content: string | null;
   options: [string, string, string] | null;
+  correctIndex: 0 | 1 | 2 | null;
+}
+
+interface Feedback {
+  chosenIdx: number;
+  correctIdx: number;
 }
 
 export function Chat({
@@ -31,6 +37,8 @@ export function Chat({
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [entities, setEntities] = useState<RailEntity[]>([]);
   const [options, setOptions] = useState<[string, string, string] | null>(null);
+  const [correctIdx, setCorrectIdx] = useState<0 | 1 | 2 | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [thinking, setThinking] = useState(true);
   const [agentDone, setAgentDone] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -66,6 +74,7 @@ export function Chat({
     async (currentTurns: ChatTurn[]) => {
       setThinking(true);
       setOptions(null);
+      setCorrectIdx(null);
       const lastUser = [...currentTurns].reverse().find((t) => t.role === "user");
       try {
         const res = await fetch("/api/chat", {
@@ -99,6 +108,8 @@ export function Chat({
           return next;
         });
         setOptions(data.options ?? null);
+        setCorrectIdx(data.correctIndex);
+        setFeedback(null);
         lastAgentAtRef.current = Date.now();
       } finally {
         setThinking(false);
@@ -118,26 +129,33 @@ export function Chat({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [turns.length]);
 
-  /** Selecting an option records the choice as the user's reply. */
+  /** Selecting an option records the choice as the user's reply, with correctness. */
   const handleSelect = useCallback(
-    (text: string) => {
-      if (thinking || agentDone) return;
+    (text: string, chosenIdx: number) => {
+      if (thinking || agentDone || feedback != null) return;
       const latencyMs = lastAgentAtRef.current
         ? Date.now() - lastAgentAtRef.current
         : null;
+      const isCorrect =
+        correctIdx != null ? chosenIdx === correctIdx : undefined;
       const userTurn: ChatTurn = {
         role: "user",
         content: text,
         createdAt: Date.now(),
         latencyMs: latencyMs ?? undefined,
+        correct: isCorrect,
       };
       const newTurns = [...turns, userTurn];
       turnsRef.current = newTurns;
       setTurns(newTurns);
-      setOptions(null);
+
+      // Show green/red feedback for ~900ms before loading the next question.
+      if (correctIdx != null) {
+        setFeedback({ chosenIdx, correctIdx });
+      }
 
       const optimistic: RailEntity = {
-        ...createReplyEntity({ text, character, latencyMs }),
+        ...createReplyEntity({ text, character, latencyMs, correct: isCorrect }),
         pending: true,
         onChain: false,
       };
@@ -149,7 +167,7 @@ export function Chat({
           const res = await fetch("/api/archive/create", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ character, text, latencyMs }),
+            body: JSON.stringify({ character, text, latencyMs, correct: isCorrect }),
           });
           if (!res.ok) return;
           const confirmed = (await res.json()) as RailEntity;
@@ -168,9 +186,10 @@ export function Chat({
         }
       })();
 
-      askNext(newTurns);
+      // Wait briefly so the player sees the right/wrong flash, then ask next.
+      setTimeout(() => askNext(newTurns), 900);
     },
-    [thinking, agentDone, turns, character, askNext],
+    [thinking, agentDone, feedback, correctIdx, turns, character, askNext],
   );
 
   // Freshness countdown for the current question.
@@ -191,10 +210,13 @@ export function Chat({
     };
   }, [now]);
 
+  // Score: you only earn points when your answer is correct. Freshness then
+  // determines how many — fast+right = full, slow+right = half, wrong = 0.
   const score = useMemo(() => {
     let s = 0;
     for (const t of turns) {
       if (t.role !== "user") continue;
+      if (t.correct !== true) continue;
       const f = freshnessFor(t.latencyMs ?? null);
       s += f === "fresh" ? 25 : f === "stale" ? 12 : 0;
     }
@@ -206,7 +228,7 @@ export function Chat({
 
   return (
     <Bezel
-      title={`ARKIV · ARCHIVE QUIZ · ${char.name}`}
+      title={`ARKIV · QUIZ · ${char.name}`}
       status={
         <span className="flex items-center gap-3">
           <span className={gameLow ? "text-arkiv-orange" : ""}>
@@ -262,20 +284,43 @@ export function Chat({
               </span>
               <span className="opacity-50">pick one — fast</span>
             </div>
-            {options && !thinking && !agentDone ? (
+            {options && !agentDone ? (
               <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                {options.map((opt, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleSelect(opt)}
-                    className="rounded border-2 border-ink bg-sand px-3 py-3 text-left font-mono text-sm shadow-bezel transition hover:bg-stone active:translate-y-[2px] active:shadow-none"
-                  >
-                    <span className="mr-2 text-[10px] text-arkiv-blue">
-                      {String.fromCharCode(65 + i)}
-                    </span>
-                    {opt}
-                  </button>
-                ))}
+                {options.map((opt, i) => {
+                  const isChosen = feedback?.chosenIdx === i;
+                  const isCorrect = feedback?.correctIdx === i;
+                  const showCorrect = feedback != null && isCorrect;
+                  const showWrong = feedback != null && isChosen && !isCorrect;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => handleSelect(opt, i)}
+                      disabled={feedback != null || thinking}
+                      className={`rounded border-2 border-ink px-3 py-3 text-left font-mono text-sm shadow-bezel transition active:translate-y-[2px] active:shadow-none disabled:cursor-default ${
+                        showCorrect
+                          ? "bg-emerald-300/60"
+                          : showWrong
+                            ? "bg-arkiv-orange/40"
+                            : "bg-sand hover:bg-stone"
+                      }`}
+                    >
+                      <span className="mr-2 text-[10px] text-arkiv-blue">
+                        {String.fromCharCode(65 + i)}
+                      </span>
+                      {opt}
+                      {showCorrect && (
+                        <span className="ml-2 text-[10px] uppercase tracking-widest">
+                          ✓ right
+                        </span>
+                      )}
+                      {showWrong && (
+                        <span className="ml-2 text-[10px] uppercase tracking-widest">
+                          ✗ wrong
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               <div className="rounded border border-dashed border-ink/30 p-3 text-center font-mono text-xs opacity-60">

@@ -68,6 +68,8 @@ export function Seal({
               arcadeScore: result.arcadeScore,
               playerName,
               medianLatencyMs: result.signals.medianLatencyMs,
+              correctCount: result.signals.correctCount,
+              totalAnswered: result.signals.totalAnswered,
             }),
           });
           if (sealRes.ok) {
@@ -98,7 +100,7 @@ export function Seal({
           <h2 className="mt-3 font-mono text-3xl">Sealing your conversation</h2>
           <p className="mt-2 max-w-md text-sm opacity-70">
             Your replies are being read one last time. Whatever's still in the
-            archive when this finishes is what shapes your data type.
+            Arkiv when this finishes is what shapes your data type.
           </p>
 
           <div className="mt-8 space-y-2 font-mono text-sm">

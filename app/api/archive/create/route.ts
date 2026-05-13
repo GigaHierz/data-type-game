@@ -9,6 +9,7 @@ interface Body {
   character: DataTypeKey;
   text: string;
   latencyMs: number | null;
+  correct?: boolean;
 }
 
 export async function POST(req: Request) {
@@ -20,6 +21,7 @@ export async function POST(req: Request) {
     text: body.text,
     character: body.character,
     latencyMs: body.latencyMs ?? null,
+    correct: body.correct,
   });
   return NextResponse.json(entity);
 }

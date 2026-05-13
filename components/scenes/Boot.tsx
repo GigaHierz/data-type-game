@@ -48,11 +48,11 @@ export function Boot({ onStart }: { onStart: (name: string) => void }) {
             <h1 className="mt-6 max-w-md font-mono text-4xl leading-tight md:text-5xl">
               A 60-second quiz
               <br />
-              <span className="text-arkiv-blue">about the archive.</span>
+              <span className="text-arkiv-blue">about Arkiv.</span>
             </h1>
             <p className="mt-5 max-w-md text-base leading-relaxed">
-              A computer asks you three questions about memory, data, and what's
-              worth keeping. Every reply is written to <em>the archive</em> as
+              A computer asks you a few questions about memory, data, and
+              what's worth keeping. Every reply is written to <em>Arkiv</em> as
               an entity with its own expiration timer. The faster you reply,
               the longer it lives. At the end, we tell you which <b>data type</b>
               you are. Then the chat dissolves. Your type doesn't.
@@ -87,7 +87,7 @@ export function Boot({ onStart }: { onStart: (name: string) => void }) {
                     ? "loading…"
                     : !trimmed
                       ? "type your name first"
-                      : `boot the archive as ${trimmed}`}
+                      : `enter Arkiv as ${trimmed}`}
                 </span>
                 <span aria-hidden>›</span>
               </button>

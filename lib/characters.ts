@@ -58,6 +58,8 @@ export const CHARACTERS: Record<DataTypeKey, DataType> = {
 export interface ScriptedQuestion {
   prompt: string;
   options: [string, string, string];
+  /** Index (0|1|2) of the correct option. */
+  correctIndex: 0 | 1 | 2;
 }
 
 /**
@@ -65,127 +67,146 @@ export interface ScriptedQuestion {
  * lifespan. Each character has a question bank in their voice. PULSE asks
  * exactly 3 (the spec); CACHE + STACKS rotate through more.
  */
+/**
+ * Beginner-level MC questions. Every question has ONE correct answer
+ * (correctIndex). Difficulty is "you've read the Arkiv one-pager", not
+ * "you've shipped on Braga for a year".
+ */
 export const SCRIPTED_QUESTIONS: Record<DataTypeKey, ScriptedQuestion[]> = {
   pulse: [
     {
-      prompt: "GO! HOT DATA LIVES FOR HOW LONG??",
-      options: ["UNDER A SECOND", "A FULL WEEK", "A WHOLE LIFETIME"],
+      prompt: "GO! ARKIV STORES DATA FOR HOW LONG??",
+      options: ["UNDER A SECOND", "SECONDS TO WEEKS", "200 YEARS+"],
+      correctIndex: 1,
     },
     {
-      prompt: "PICK FAST. YOUR OUTBOX RIGHT NOW??",
-      options: ["NUKE IT", "KEEP A WEEK", "SAVE FOREVER"],
+      prompt: "WHAT IS HOT DATA?",
+      options: ["DATA THAT LIVES IN RAM", "DATA THAT LIVES FOREVER", "DATA THAT IS POPULAR"],
+      correctIndex: 0,
     },
     {
-      prompt: "ARKIV IS FOR WHICH ONE??",
-      options: ["RAM + PUBSUB", "SECONDS TO WEEKS", "TWO HUNDRED YEARS"],
+      prompt: "ARKIV'S SUPERPOWER??",
+      options: ["FREE INFINITE STORAGE", "TIME-SCOPED ENTITIES", "NFT MINTING"],
+      correctIndex: 1,
     },
   ],
   cache: [
     {
-      prompt: "Which entity belongs on Arkiv?",
+      prompt: "Which one is a great fit for Arkiv?",
       options: [
         "A static website asset",
-        "An AI agent's session memory",
-        "A 50-year tax record",
+        "An AI agent's short-term memory",
+        "A 50-year compliance archive",
       ],
+      correctIndex: 1,
     },
     {
-      prompt: "What does Arkiv actually expire?",
+      prompt: "What does Arkiv do when an entity's TTL ends?",
       options: [
-        "Just the attributes",
-        "The whole entity, payload included",
-        "Nothing — you delete it manually",
+        "Keeps it forever, marked expired",
+        "Deletes it automatically",
+        "Nothing — you have to delete it yourself",
       ],
+      correctIndex: 1,
     },
     {
-      prompt: "Best use of extendEntity?",
+      prompt: "What is Arkiv?",
       options: [
-        "Bump the top-5 leaderboard rows",
-        "Reset the entity's payload",
-        "Double the storage cost",
+        "A blockchain for NFTs",
+        "A time-scoped, queryable data layer for Ethereum",
+        "A wallet for stablecoins",
       ],
+      correctIndex: 1,
     },
     {
-      prompt: "PROJECT_ATTRIBUTE is for…",
+      prompt: "What's a typical Arkiv lifespan?",
+      options: ["A few seconds to a few weeks", "Forever", "Just the current block"],
+      correctIndex: 0,
+    },
+    {
+      prompt: "Why would an AI agent love Arkiv?",
       options: [
-        "Branding the entity",
-        "Filtering your project's data from everyone else's",
-        "Naming the chain",
+        "It's free forever",
+        "Transparent short-term memory it can query",
+        "It auto-trains models",
       ],
+      correctIndex: 1,
     },
     {
-      prompt: "Which attribute type supports range queries?",
-      options: ["Strings", "Numeric values", "Binary blobs"],
-    },
-    {
-      prompt: "Arkiv's TTL sweet spot?",
+      prompt: "What does Arkiv's `extendEntity` do?",
       options: [
-        "Nanoseconds to seconds",
-        "Seconds to weeks",
-        "Years to centuries",
+        "Refreshes the TTL on an entity",
+        "Duplicates the entity",
+        "Encrypts the payload",
       ],
+      correctIndex: 0,
     },
     {
-      prompt: "Best pattern for AI agent memory on Arkiv?",
+      prompt: "Which sentence is true about Arkiv?",
       options: [
-        "Store everything forever",
-        "Short TTL + extendEntity on what matters",
-        "Use static config files instead",
+        "Data is queryable like a database",
+        "Data is invisible until decrypted",
+        "Only the owner can read it",
       ],
+      correctIndex: 0,
     },
     {
-      prompt: "What makes an Arkiv read trustworthy?",
-      options: [
-        "Filter by PROJECT_ATTRIBUTE only",
-        "Filter by PROJECT_ATTRIBUTE + createdBy",
-        "Trust everything with the right project tag",
-      ],
+      prompt: "Arkiv is anchored to which chain?",
+      options: ["Bitcoin", "Solana", "Ethereum"],
+      correctIndex: 2,
     },
   ],
   stacks: [
     {
-      prompt: "Right tool for 100-year storage?",
-      options: ["Arkiv", "An institutional archive", "A USB stick in a drawer"],
+      prompt: "Is Arkiv the right place for a 100-year archive?",
+      options: ["Yes, just set a long TTL", "No — Arkiv is short-term", "Only if you pay extra"],
+      correctIndex: 1,
     },
     {
-      prompt: "Arkiv's TTL works best for…",
-      options: ["Centuries", "Months at most", "Working memory and short archives"],
-    },
-    {
-      prompt: "If data must outlive a blockchain…",
+      prompt: "Arkiv works best for…",
       options: [
-        "Use Arkiv with extendEntity",
-        "Pair an archive node with paper backup",
-        "Hope, basically",
+        "Decades of cold storage",
+        "Seconds-to-weeks data with expiration",
+        "Realtime sub-millisecond reads",
       ],
+      correctIndex: 1,
+    },
+    {
+      prompt: "If you need data to live forever, what do you do?",
+      options: [
+        "Use Arkiv with a very long TTL",
+        "Use something else — Arkiv isn't built for forever",
+        "Hope very hard",
+      ],
+      correctIndex: 1,
+    },
+    {
+      prompt: "What's Arkiv's biggest design idea?",
+      options: [
+        "Data should expire automatically",
+        "Data should never be deleted",
+        "Data should be encrypted by default",
+      ],
+      correctIndex: 0,
+    },
+    {
+      prompt: "A family heirloom photo album — where?",
+      options: [
+        "Arkiv with ExpirationTime.fromDays(36500)",
+        "A safe + a real archive institution",
+        "A throwaway Twitter post",
+      ],
+      correctIndex: 1,
     },
     {
       prompt: "Where does Arkiv start to struggle?",
       options: ["At seconds-scale", "At weeks-scale", "Past months and years"],
-    },
-    {
-      prompt: "A family heirloom should be kept in…",
-      options: [
-        "Arkiv with ExpirationTime.fromDays(36500)",
-        "A safe deposit box plus institutional record",
-        "A blog post",
-      ],
-    },
-    {
-      prompt: "Permanence really comes from…",
-      options: [
-        "A blockchain alone",
-        "Stewardship across institutions and generations",
-        "Cheap, infinite RAM",
-      ],
+      correctIndex: 2,
     },
     {
       prompt: "What does Arkiv NOT do well?",
-      options: [
-        "Fast lookups",
-        "Forever storage",
-        "Time-scoped expiration",
-      ],
+      options: ["Time-scoped expiration", "Forever storage", "Queryable attributes"],
+      correctIndex: 1,
     },
   ],
 };
@@ -223,7 +244,12 @@ export function systemPromptFor(key: DataTypeKey): string {
     `- Voice: ${voiceRule}`,
     `- Never explain the game, never mention "data type" or "classifier".`,
     ``,
+    `DIFFICULTY: beginner. Assume the player has read a one-paragraph intro`,
+    `to Arkiv, not a year of docs. Avoid SDK-internal trivia (raw attribute`,
+    `types, attribute key syntax, specific helper function names). Keep`,
+    `options plausible and short.`,
+    ``,
     `OUTPUT FORMAT — return ONLY this JSON, no other text, no markdown:`,
-    `{"question":"<your question>","options":["<option a>","<option b>","<option c>"]}`,
+    `{"question":"<your question>","options":["<a>","<b>","<c>"],"correctIndex":<0|1|2>}`,
   ].join("\n");
 }

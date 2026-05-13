@@ -16,7 +16,7 @@ export interface RailEntity extends Entity {
 
 export function EntityRail({
   entities,
-  title = "STILL IN THE ARCHIVE",
+  title = "STILL IN ARKIV",
   forceExpired = false,
 }: {
   entities: RailEntity[];
@@ -53,8 +53,8 @@ export function EntityRail({
         {visible.length === 0 ? (
           <div className="rounded border border-dashed border-ink/30 p-4 text-center font-mono text-[11px] opacity-60">
             {entities.length === 0
-              ? "no entities yet · reply to write to the archive"
-              : "every entity has expired · the archive is empty"}
+              ? "no entities yet · reply to write to Arkiv"
+              : "every entity has expired · Arkiv is empty"}
           </div>
         ) : (
           visible.map((e) => (

@@ -34,17 +34,19 @@ function pickScripted(
 
 /** Parse strict-JSON output from Claude. Returns null if parse fails. */
 function parseLlmJson(text: string): ScriptedQuestion | null {
-  // Try to find a JSON object in the response, tolerating any prose around it.
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) return null;
   try {
     const obj = JSON.parse(match[0]) as {
       question?: unknown;
       options?: unknown;
+      correctIndex?: unknown;
     };
     if (typeof obj.question !== "string") return null;
     if (!Array.isArray(obj.options) || obj.options.length !== 3) return null;
     if (!obj.options.every((o) => typeof o === "string" && o.length > 0)) return null;
+    const ci = obj.correctIndex;
+    if (typeof ci !== "number" || ![0, 1, 2].includes(ci)) return null;
     return {
       prompt: obj.question,
       options: [obj.options[0], obj.options[1], obj.options[2]] as [
@@ -52,6 +54,7 @@ function parseLlmJson(text: string): ScriptedQuestion | null {
         string,
         string,
       ],
+      correctIndex: ci as 0 | 1 | 2,
     };
   } catch {
     return null;
@@ -130,6 +133,7 @@ export async function POST(req: Request) {
           done: false,
           content: parsed.prompt,
           options: parsed.options,
+          correctIndex: parsed.correctIndex,
           source: "llm",
         });
       }
@@ -148,6 +152,7 @@ export async function POST(req: Request) {
     done: false,
     content: scripted.prompt,
     options: scripted.options,
+    correctIndex: scripted.correctIndex,
     source: apiKey ? "scripted-fallback" : "scripted",
   });
 }

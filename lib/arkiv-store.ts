@@ -77,12 +77,12 @@ function makeKey(prefix: string): string {
 export type Freshness = "fresh" | "stale" | "lost";
 
 /**
- * Freshness windows for the one-minute game, aligned with the three latency
- * bands. Reply within 10s (PULSE or CACHE band) → entity gets the long TTL.
- * 10-20s (STACKS band) → stale. Beyond → lost (expires before sealing).
+ * Freshness windows. Reply within 20s and your entity gets the long TTL.
+ * 20-35s → stale. Beyond → lost (expires before sealing). The window is
+ * generous because each question is multiple-choice and worth reading.
  */
-export const FRESH_THRESHOLD_MS = 10_000;
-export const LOST_THRESHOLD_MS = 20_000;
+export const FRESH_THRESHOLD_MS = 20_000;
+export const LOST_THRESHOLD_MS = 35_000;
 
 export function freshnessFor(latencyMs: number | null): Freshness {
   if (latencyMs == null) return "fresh";
@@ -121,11 +121,12 @@ export function createReplyEntity(opts: {
   text: string;
   character: DataTypeKey;
   latencyMs: number | null;
+  correct?: boolean;
 }): Entity & { freshness: Freshness } {
   const freshness = freshnessFor(opts.latencyMs);
   return {
     entityKey: makeKey("reply"),
-    payload: { text: opts.text },
+    payload: { text: opts.text, correct: opts.correct ?? null },
     contentType: "text/plain",
     attributes: [
       PROJECT_ATTRIBUTE,
@@ -134,6 +135,7 @@ export function createReplyEntity(opts: {
       { key: "latencyMs", value: opts.latencyMs ?? 0 },
       { key: "length", value: opts.text.length },
       { key: "freshness", value: freshness },
+      { key: "correct", value: opts.correct == null ? "unknown" : opts.correct ? "yes" : "no" },
       { key: "createdAt", value: Date.now() },
     ],
     expiresIn: ttlForFreshness(freshness),

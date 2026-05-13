@@ -9,6 +9,8 @@ interface Body {
   arcadeScore: number;
   playerName?: string;
   medianLatencyMs?: number;
+  correctCount?: number;
+  totalAnswered?: number;
 }
 
 export async function POST(req: Request) {
@@ -21,6 +23,8 @@ export async function POST(req: Request) {
     arcadeScore: body.arcadeScore ?? 0,
     playerName: body.playerName,
     medianLatencyMs: body.medianLatencyMs,
+    correctCount: body.correctCount,
+    totalAnswered: body.totalAnswered,
   });
   return NextResponse.json(entity);
 }
