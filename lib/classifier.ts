@@ -235,19 +235,24 @@ export function classify(allTurns: ChatTurn[]): ClassifyResult {
     );
   }
 
-  // Score: per correct answer = 1000 + max(0, 2000 - latencyMs/10).
-  //   - Wrong answers earn 0 — they still contribute to latency / type but
-  //     not to the leaderboard score.
-  //   - "Lost" (over-time) replies also earn 0.
-  //   - Range: 0 to 10,000.
+  // Score per correct answer = 100 baseline + max(0, 250 − latencyMs / 40)
+  // i.e. 100..350. Designed so PULSE-band players (<5s) get a meaningful
+  // speed bonus, and reaching 10,000 takes ~30+ correct answers across
+  // sessions. Wrong answers and over-time ("lost") replies earn nothing.
+  //
+  // The 10,000 cap is enforced at the leaderboard aggregation level
+  // (readLeaderboard sums by name), not per game. A single game tops out
+  // around ~350 × answered-questions, so realistic single-session scores
+  // sit in the 0–2,000 range.
   let arcadeScore = 0;
   for (const t of allTurns) {
     if (t.role !== "user" || t.correct !== true) continue;
     if (freshnessFor(t.latencyMs ?? null) === "lost") continue;
     const latency = t.latencyMs ?? 0;
-    arcadeScore += 1000 + Math.max(0, Math.round(2000 - latency / 10));
+    arcadeScore += 100 + Math.max(0, Math.round(250 - latency / 40));
   }
-  arcadeScore = Math.min(10_000, arcadeScore);
+  // Don't cap here — per-game scores stay raw. The cumulative leaderboard
+  // does the 10,000 clamp after summing across this player's prior games.
 
   return {
     type: CHARACTERS[winner],

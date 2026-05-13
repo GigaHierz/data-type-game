@@ -216,18 +216,18 @@ export function Chat({
     };
   }, [now]);
 
-  // Score: only correct answers earn points. Each correct answer is worth
-  //   1000 + max(0, 2000 - latencyMs/10)
-  // i.e. 1000 baseline + a 0..2000 speed bonus that vanishes at 20s. Total
-  // capped at 10,000. Five perfect instant answers tops out.
+  // Score per correct answer: 100 baseline + up to 250 speed bonus.
+  // PULSE-band replies (<3s) earn ~325-350, CACHE band (5-10s) ~150-225,
+  // STACKS band slower than that. Reaching the 10,000 leaderboard cap takes
+  // ~30 correct answers — i.e. multiple sessions of play.
   const score = useMemo(() => {
     let s = 0;
     for (const t of turns) {
       if (t.role !== "user" || t.correct !== true) continue;
       const latency = t.latencyMs ?? 0;
-      s += 1000 + Math.max(0, Math.round(2000 - latency / 10));
+      s += 100 + Math.max(0, Math.round(250 - latency / 40));
     }
-    return Math.min(10_000, s);
+    return s;
   }, [turns]);
 
   const correctCount = useMemo(
