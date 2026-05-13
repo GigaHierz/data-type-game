@@ -33,7 +33,9 @@ export function EntityCard({
   const remaining = remainingMs(entity, now);
   const expired = progress >= 1;
 
-  const text = (entity.payload as { text: string }).text ?? "";
+  const payload = entity.payload as { text?: string; correct?: boolean | null };
+  const text = payload.text ?? "";
+  const correct = payload.correct ?? null;
 
   const freshClass =
     freshness === "fresh"
@@ -55,13 +57,35 @@ export function EntityCard({
         <span className="truncate text-[10px] opacity-60">
           {entity.entityKey}
         </span>
-        <span
-          className={`text-[10px] ${
-            expired ? "text-ink/40" : remaining < 8000 ? "text-arkiv-orange" : "text-arkiv-blue"
-          }`}
-        >
-          TTL {formatRemaining(remaining)}
-        </span>
+        <div className="flex items-center gap-2 text-[10px]">
+          {correct === true && (
+            <span
+              className="rounded-sm border border-arkiv-blue/50 bg-arkiv-blue/10 px-1 text-arkiv-blue"
+              title="correct: yes"
+            >
+              ✓ RIGHT
+            </span>
+          )}
+          {correct === false && (
+            <span
+              className="rounded-sm border border-arkiv-orange/60 bg-arkiv-orange/10 px-1 text-arkiv-orange"
+              title="correct: no"
+            >
+              ✗ WRONG
+            </span>
+          )}
+          <span
+            className={
+              expired
+                ? "text-ink/40"
+                : remaining < 8000
+                  ? "text-arkiv-orange"
+                  : "text-arkiv-blue"
+            }
+          >
+            TTL {formatRemaining(remaining)}
+          </span>
+        </div>
       </div>
       <div className={`mt-1 line-clamp-2 ${freshClass}`}>{text || "·"}</div>
       {/* status chip — pending → on-chain tx → synthetic */}

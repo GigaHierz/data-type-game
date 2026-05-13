@@ -179,7 +179,9 @@ export function Leaderboard({
                 >
                   {char.name}
                 </span>
-                <span className="text-right tabular-nums">{r.arcadeScore}</span>
+                <span className="text-right tabular-nums">
+                  {r.arcadeScore.toLocaleString()}
+                </span>
                 <span className="text-right tabular-nums">
                   {r.totalAnswered > 0 ? `${r.correctPct}%` : "—"}
                 </span>

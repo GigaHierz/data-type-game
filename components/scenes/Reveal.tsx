@@ -35,7 +35,7 @@ export function Reveal({
   const swatch = type.swatch;
 
   function shareOnX() {
-    const text = `I am ${type.name} · ${type.subtitle} on @arkivnetwork's data type game. Score ${arcadeScore}/100. Find your type:`;
+    const text = `I am ${type.name} · ${type.subtitle} on @arkivnetwork's data type game. Score ${arcadeScore.toLocaleString()}/10,000. Find your type:`;
     const url =
       typeof window !== "undefined"
         ? window.location.origin
@@ -79,7 +79,7 @@ export function Reveal({
               <Stat label="TTL" value={type.ttlLabel} ink={swatch.ink} />
               <Stat
                 label="SCORE"
-                value={`${arcadeScore} / 100`}
+                value={`${arcadeScore.toLocaleString()} / 10,000`}
                 ink={swatch.ink}
               />
               <Stat

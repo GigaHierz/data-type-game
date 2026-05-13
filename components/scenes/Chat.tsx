@@ -49,6 +49,9 @@ export function Chat({
   const entitiesRef = useRef<RailEntity[]>([]);
   const gameStartRef = useRef<number>(Date.now());
   const completedRef = useRef(false);
+  // Guards against React 18 dev StrictMode double-mount firing askNext twice
+  // — that was producing two near-identical questions at game start.
+  const startedRef = useRef(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -118,8 +121,11 @@ export function Chat({
     [character, onComplete],
   );
 
-  // Kick off the first question.
+  // Kick off the first question. Ref-guarded so dev StrictMode's double-mount
+  // can't fire two parallel LLM calls and produce two near-identical questions.
   useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
     askNext([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -210,18 +216,32 @@ export function Chat({
     };
   }, [now]);
 
-  // Score: you only earn points when your answer is correct. Freshness then
-  // determines how many — fast+right = full, slow+right = half, wrong = 0.
+  // Score: only correct answers earn points. Each correct answer is worth
+  //   1000 + max(0, 2000 - latencyMs/10)
+  // i.e. 1000 baseline + a 0..2000 speed bonus that vanishes at 20s. Total
+  // capped at 10,000. Five perfect instant answers tops out.
   const score = useMemo(() => {
     let s = 0;
     for (const t of turns) {
-      if (t.role !== "user") continue;
-      if (t.correct !== true) continue;
-      const f = freshnessFor(t.latencyMs ?? null);
-      s += f === "fresh" ? 25 : f === "stale" ? 12 : 0;
+      if (t.role !== "user" || t.correct !== true) continue;
+      const latency = t.latencyMs ?? 0;
+      s += 1000 + Math.max(0, Math.round(2000 - latency / 10));
     }
-    return Math.min(100, s);
+    return Math.min(10_000, s);
   }, [turns]);
+
+  const correctCount = useMemo(
+    () =>
+      turns.reduce(
+        (acc, t) => acc + (t.role === "user" && t.correct === true ? 1 : 0),
+        0,
+      ),
+    [turns],
+  );
+  const answeredCount = useMemo(
+    () => turns.reduce((acc, t) => acc + (t.role === "user" ? 1 : 0), 0),
+    [turns],
+  );
 
   const gameRemaining = Math.max(0, GAME_DURATION_MS - (now - gameStartRef.current));
   const gameLow = gameRemaining < 15_000;
@@ -234,7 +254,9 @@ export function Chat({
           <span className={gameLow ? "text-arkiv-orange" : ""}>
             ⏱ {(gameRemaining / 1000).toFixed(1)}s
           </span>
-          <span>score {score}/100</span>
+          <span>
+            {correctCount}/{answeredCount} right · {score} pts
+          </span>
         </span>
       }
     >
