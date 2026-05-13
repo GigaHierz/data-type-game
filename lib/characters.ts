@@ -9,9 +9,9 @@ import type { DataType, DataTypeKey } from "./types";
  */
 /**
  * Three data types, banded by reply latency:
- *   < 5s   → PULSE   (hot data — too fast for Arkiv)
- *   5–10s  → CACHE   (Arkiv's sweet spot — agent memory, verifiable archives)
- *   > 10s  → STACKS  (forever — also not what Arkiv does, gently)
+ *   < 7s   → PULSE   (hot data — too fast for Arkiv)
+ *   7–12s  → CACHE   (Arkiv's sweet spot — agent memory, verifiable archives)
+ *   > 12s  → STACKS  (forever — also not what Arkiv does, gently)
  */
 export const CHARACTERS: Record<DataTypeKey, DataType> = {
   pulse: {

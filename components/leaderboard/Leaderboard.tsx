@@ -176,8 +176,10 @@ export function Leaderboard({
                   {isMe && <span className="ml-1 opacity-60">· you</span>}
                   {inTop5 && (
                     <span
-                      className={`ml-2 inline-block rounded-sm border border-arkiv-blue/40 px-1 text-[9px] tracking-widest text-arkiv-blue ${
-                        flash ? "animate-pulse" : ""
+                      className={`ml-2 inline-block animate-pulse rounded-sm border px-1 text-[9px] tracking-widest ${
+                        flash
+                          ? "border-arkiv-orange bg-arkiv-orange/20 text-arkiv-orange"
+                          : "border-arkiv-blue/40 text-arkiv-blue"
                       }`}
                       title="auto-extended via Arkiv extendEntity"
                     >
@@ -186,8 +188,17 @@ export function Leaderboard({
                   )}
                 </span>
                 <span
-                  className="truncate text-right text-[10px]"
-                  style={{ color: char.swatch.bg === "#F6F4EF" ? "#181EA9" : char.swatch.bg }}
+                  className="truncate text-right text-[10px] font-semibold"
+                  style={{
+                    // Hand-picked legible color per type — using swatch.bg
+                    // made STACKS (Stone #E9E6DE) invisible on sand bg.
+                    color:
+                      r.type === "pulse"
+                        ? "#FE7446"
+                        : r.type === "cache"
+                          ? "#181EA9"
+                          : "#111111",
+                  }}
                 >
                   {char.name}
                 </span>

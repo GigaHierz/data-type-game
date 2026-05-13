@@ -133,19 +133,19 @@ export function classify(allTurns: ChatTurn[]): ClassifyResult {
   const turns = effectiveTurns(allTurns);
   const rationale: string[] = [];
 
-  // Latency bands, aligned with the three-type model:
-  //   < 5s   → hot data (too fast for Arkiv)               PULSE
-  //   5–10s  → Arkiv's sweet spot (agent memory, archives) CACHE
-  //   > 10s  → forever (also not what Arkiv does)          STACKS
+  // Latency bands, aligned with the three-type model (final tuning):
+  //   < 7s   → hot data (too fast for Arkiv)               PULSE
+  //   7–12s  → Arkiv's sweet spot (agent memory, archives) CACHE
+  //   > 12s  → forever (also not what Arkiv does)          STACKS
   const m = signals.medianLatencyMs / 1000; // seconds
   const latencyScores: Record<DataTypeKey, number> = {
-    pulse: m < 5 ? 50 : m < 7 ? 20 : 0,
-    cache: m >= 5 && m < 10 ? 50 : m < 5 ? 20 : m < 13 ? 20 : 0,
-    stacks: m >= 10 ? 50 : m >= 8 ? 20 : 0,
+    pulse: m < 7 ? 50 : m < 9 ? 20 : 0,
+    cache: m >= 7 && m < 12 ? 50 : m < 7 ? 20 : m < 15 ? 20 : 0,
+    stacks: m >= 12 ? 50 : m >= 10 ? 20 : 0,
   };
-  if (m < 5)
+  if (m < 7)
     rationale.push(`You replied fast (median ${m.toFixed(1)}s) — hot data territory.`);
-  else if (m >= 10)
+  else if (m >= 12)
     rationale.push(`You took your time (median ${m.toFixed(1)}s) — past Arkiv's window.`);
   else
     rationale.push(`Reply latency sat at ${m.toFixed(1)}s — squarely Arkiv's band.`);
