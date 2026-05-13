@@ -44,11 +44,8 @@ export function Boot({ onStart }: { onStart: (name: string) => void }) {
       <div className="crt relative grid min-h-[560px] grid-cols-1 gap-6 bg-sand p-6 md:grid-cols-[1fr_320px]">
         <div className="flex flex-col justify-between">
           <div>
-            <ArkivMark />
-            <h1 className="mt-6 max-w-md font-mono text-4xl leading-tight md:text-5xl">
-              A 60-second quiz
-              <br />
-              <span className="text-arkiv-blue">about Arkiv.</span>
+            <h1 className="max-w-md font-mono text-4xl leading-tight md:text-5xl">
+              What <span className="text-arkiv-blue">data type</span> are you?
             </h1>
             <p className="mt-5 max-w-md text-base leading-relaxed">
               A computer asks you a few questions about memory, data, and
