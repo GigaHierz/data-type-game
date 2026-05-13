@@ -7,6 +7,8 @@ export const runtime = "nodejs";
 interface Body {
   type: DataTypeKey;
   arcadeScore: number;
+  playerName?: string;
+  medianLatencyMs?: number;
 }
 
 export async function POST(req: Request) {
@@ -17,6 +19,8 @@ export async function POST(req: Request) {
   const entity = await writeDataTypeEntity({
     type: body.type,
     arcadeScore: body.arcadeScore ?? 0,
+    playerName: body.playerName,
+    medianLatencyMs: body.medianLatencyMs,
   });
   return NextResponse.json(entity);
 }

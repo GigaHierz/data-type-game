@@ -13,6 +13,7 @@ import type { ClassifyResult } from "@/lib/classifier";
 
 export default function Page() {
   const [phase, setPhase] = useState<Phase>("boot");
+  const [playerName, setPlayerName] = useState<string>("");
   const [character, setCharacter] = useState<DataTypeKey | null>(null);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [entities, setEntities] = useState<RailEntity[]>([]);
@@ -38,7 +39,14 @@ export default function Page() {
           </div>
         </header>
 
-        {phase === "boot" && <Boot onStart={() => setPhase("connect")} />}
+        {phase === "boot" && (
+          <Boot
+            onStart={(name) => {
+              setPlayerName(name);
+              setPhase("connect");
+            }}
+          />
+        )}
         {phase === "connect" && (
           <Connect
             onConnected={(k) => {
@@ -61,6 +69,7 @@ export default function Page() {
           <Seal
             turns={turns}
             entities={entities}
+            playerName={playerName}
             onSealed={({ result, dataTypeEntity }) => {
               setResult(result);
               setDataTypeEntity(dataTypeEntity);
@@ -73,6 +82,7 @@ export default function Page() {
             result={result}
             entities={entities}
             dataTypeEntity={dataTypeEntity}
+            playerName={playerName}
             onPlayAgain={reset}
           />
         )}

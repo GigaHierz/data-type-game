@@ -4,27 +4,34 @@ import { useState } from "react";
 import { Bezel } from "@/components/ui/Bezel";
 import { CharacterSprite } from "@/components/characters";
 import { EntityRail, type RailEntity } from "@/components/archive/EntityRail";
+import { Leaderboard } from "@/components/leaderboard/Leaderboard";
 import type { ClassifyResult } from "@/lib/classifier";
 
 export function Reveal({
   result,
   entities,
   dataTypeEntity,
+  playerName,
   onPlayAgain,
 }: {
   result: ClassifyResult;
   entities: RailEntity[];
   dataTypeEntity: RailEntity | null;
+  playerName: string;
   onPlayAgain: () => void;
 }) {
-  const [aftermath, setAftermath] = useState(false);
+  const [showBoard, setShowBoard] = useState(false);
   const { type, arcadeScore, signals, rationale } = result;
 
   const verdictByType: Record<typeof type.key, string> = {
-    pulse: "You banged out your replies. Most of them are already gone.",
-    flux: "You drifted between answers. Some made it, some didn't.",
-    cache: "You wrote for the feed. Quotable, queryable, fresh.",
-    stacks: "You took your time. The arcade score is low. The answer is right.",
+    pulse:
+      "You burned through it. The archive could barely write you down. Hot data lives in RAM — Arkiv is not your tool here, and that's a compliment.",
+    flux:
+      "Drifty, transparent, just-fast-enough. You're exactly the shape Arkiv was built around. An AI agent would store its whole memory on you.",
+    cache:
+      "Punchy and verifiable. Time-scoped, queryable, fresh. You are the textbook Arkiv entity — short enough to be cheap, long enough to matter.",
+    stacks:
+      "Beautiful answers. Way too slow for Arkiv though. Arkiv doesn't really do forever — if you need 100 years, maybe carve it in stone instead. Or rethink the idea.",
   };
 
   const swatch = type.swatch;
@@ -40,7 +47,7 @@ export function Reveal({
   return (
     <Bezel
       title="ARKIV · REVEAL"
-      status={aftermath ? "aftermath" : "result.json"}
+      status={showBoard ? "leaderboard" : "result.json"}
     >
       <div
         className="crt relative grid min-h-[640px] grid-cols-1 md:grid-cols-[1fr_320px]"
@@ -108,11 +115,11 @@ export function Reveal({
               copy result
             </button>
             <button
-              onClick={() => setAftermath((v) => !v)}
+              onClick={() => setShowBoard((v) => !v)}
               className="rounded border-2 border-current bg-transparent px-4 py-2 font-mono text-sm uppercase tracking-widest"
               style={{ borderColor: swatch.ink, color: swatch.ink }}
             >
-              {aftermath ? "show entities" : "expire raw chat"}
+              {showBoard ? "hide leaderboard" : "leaderboard"}
             </button>
             <button
               onClick={onPlayAgain}
@@ -166,13 +173,12 @@ export function Reveal({
               </div>
             )}
             <div className="w-full">
-              <EntityRail
-                entities={entities}
-                title={aftermath ? "ARCHIVE · EXPIRED" : "ARCHIVE · LIVE"}
-                forceExpired={aftermath}
-              />
+              {showBoard ? (
+                <Leaderboard highlightName={playerName} compact />
+              ) : (
+                <EntityRail entities={entities} title="ARCHIVE · SURVIVORS" />
+              )}
             </div>
-            {aftermath && <div className="dust pointer-events-none absolute inset-0" />}
           </div>
         </div>
       </div>

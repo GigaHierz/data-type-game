@@ -119,18 +119,25 @@ export function classify(allTurns: ChatTurn[]): ClassifyResult {
   const turns = effectiveTurns(allTurns);
   const rationale: string[] = [];
 
-  // Latency bucket (the headline mechanic). Scaled for the one-minute game:
-  // 3s · 8s · 15s · 25s — see FRESH_THRESHOLD_MS / LOST_THRESHOLD_MS.
+  // Latency bucket (the headline mechanic). Aligned with Arkiv's actual
+  // product story:
+  //   < 4s  → hot data (too fast for Arkiv)        PULSE
+  //   4–8s  → agent memory / working state          FLUX
+  //   8–12s → perfect data / queryable archives     CACHE
+  //   > 12s → forever (Arkiv doesn't actually do this) STACKS
   const m = signals.medianLatencyMs / 1000; // seconds
   const latencyScores: Record<DataTypeKey, number> = {
-    pulse: m < 3 ? 50 : m < 5 ? 30 : m < 8 ? 10 : 0,
-    cache: m >= 3 && m < 8 ? 50 : m < 3 ? 25 : m < 15 ? 20 : 5,
-    flux: m >= 7 && m < 18 ? 50 : m >= 5 && m < 25 ? 25 : 5,
-    stacks: m >= 15 ? 50 : m >= 10 ? 25 : 0,
+    pulse: m < 4 ? 50 : m < 6 ? 25 : 0,
+    flux: m >= 4 && m < 8 ? 50 : m >= 3 && m < 10 ? 25 : 5,
+    cache: m >= 8 && m < 12 ? 50 : m >= 6 && m < 15 ? 25 : 5,
+    stacks: m >= 12 ? 50 : m >= 9 ? 25 : 0,
   };
-  if (m < 3) rationale.push(`You replied fast (median ${m.toFixed(1)}s).`);
-  else if (m > 15) rationale.push(`You took your time (median ${m.toFixed(1)}s).`);
-  else rationale.push(`Reply latency sat at ${m.toFixed(1)}s — mid-band.`);
+  if (m < 4)
+    rationale.push(`You replied fast (median ${m.toFixed(1)}s) — hot data territory.`);
+  else if (m >= 12)
+    rationale.push(`You took your time (median ${m.toFixed(1)}s) — past Arkiv's window.`);
+  else
+    rationale.push(`Reply latency sat at ${m.toFixed(1)}s — squarely Arkiv's band.`);
 
   // Caps ratio favours PULSE.
   const caps = signals.capsRatio;

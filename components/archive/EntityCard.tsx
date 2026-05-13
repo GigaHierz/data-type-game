@@ -15,14 +15,12 @@ export function EntityCard({
   pending = false,
   txHash,
   onChain = false,
-  forceExpired = false,
 }: {
   entity: Entity;
   freshness?: Freshness;
   pending?: boolean;
   txHash?: string;
   onChain?: boolean;
-  forceExpired?: boolean;
 }) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -31,8 +29,8 @@ export function EntityCard({
     return () => clearInterval(id);
   }, []);
 
-  const progress = forceExpired ? 1 : expirationProgress(entity, now);
-  const remaining = forceExpired ? 0 : remainingMs(entity, now);
+  const progress = expirationProgress(entity, now);
+  const remaining = remainingMs(entity, now);
   const expired = progress >= 1;
 
   const text = (entity.payload as { text: string }).text ?? "";

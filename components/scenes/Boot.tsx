@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bezel } from "@/components/ui/Bezel";
 import { ArkivMark } from "@/components/ui/ArkivMark";
 import { Pulse } from "@/components/characters/Pulse";
@@ -16,8 +16,11 @@ const BOOT_LINES = [
   "> READY",
 ];
 
-export function Boot({ onStart }: { onStart: () => void }) {
+export function Boot({ onStart }: { onStart: (name: string) => void }) {
   const [step, setStep] = useState(0);
+  const [name, setName] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (step < BOOT_LINES.length) {
       const id = setTimeout(() => setStep((s) => s + 1), 380);
@@ -25,6 +28,17 @@ export function Boot({ onStart }: { onStart: () => void }) {
     }
   }, [step]);
   const done = step >= BOOT_LINES.length;
+  const trimmed = name.trim();
+  const canStart = done && trimmed.length > 0;
+
+  useEffect(() => {
+    if (done) inputRef.current?.focus();
+  }, [done]);
+
+  function handleStart() {
+    if (!canStart) return;
+    onStart(trimmed);
+  }
 
   return (
     <Bezel title="ARKIV · DATA TYPE GAME" status="boot.sh">
@@ -44,14 +58,41 @@ export function Boot({ onStart }: { onStart: () => void }) {
               the longer it lives. At the end, we tell you which <b>data type</b>
               you are. Then the chat dissolves. Your type doesn't.
             </p>
-            <button
-              onClick={onStart}
-              disabled={!done}
-              className="mt-8 inline-flex items-center gap-3 rounded border-2 border-ink bg-arkiv-orange px-5 py-3 font-mono text-sm uppercase tracking-widest text-ink shadow-bezel transition active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <span>{done ? "boot the archive" : "loading…"}</span>
-              <span aria-hidden>›</span>
-            </button>
+            <div className="mt-8 max-w-md space-y-2">
+              <label
+                htmlFor="player-name"
+                className="block font-mono text-[10px] tracking-widest opacity-70"
+              >
+                ▌ NAME FOR THE LEADERBOARD
+              </label>
+              <input
+                id="player-name"
+                ref={inputRef}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleStart();
+                }}
+                disabled={!done}
+                maxLength={24}
+                placeholder={done ? "your name…" : "loading…"}
+                className="w-full rounded border-2 border-ink bg-sand px-3 py-3 font-mono text-sm placeholder:opacity-40 focus:outline-none focus:ring-0 disabled:opacity-40"
+              />
+              <button
+                onClick={handleStart}
+                disabled={!canStart}
+                className="inline-flex w-full items-center justify-between gap-3 rounded border-2 border-ink bg-arkiv-orange px-5 py-3 font-mono text-sm uppercase tracking-widest text-ink shadow-bezel transition active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <span>
+                  {!done
+                    ? "loading…"
+                    : !trimmed
+                      ? "type your name first"
+                      : `boot the archive as ${trimmed}`}
+                </span>
+                <span aria-hidden>›</span>
+              </button>
+            </div>
           </div>
 
           <div className="mt-8 rounded border border-ink/30 bg-stone/50 p-3 font-mono text-xs leading-relaxed">

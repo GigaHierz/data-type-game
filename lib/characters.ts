@@ -7,58 +7,64 @@ import type { DataType, DataTypeKey } from "./types";
  *   CACHE  → ExpirationTime.fromDays(7)
  *   STACKS → ExpirationTime.fromDays(36500)
  */
+/**
+ * The four data types. Two of them (FLUX, CACHE) sit inside Arkiv's actual
+ * sweet spot — short-term, transparent, queryable. PULSE is too fast for
+ * Arkiv (hot data lives in RAM); STACKS is too slow (Arkiv doesn't do forever).
+ * The reveal calls those two out — gently — as "maybe Arkiv isn't your tool."
+ */
 export const CHARACTERS: Record<DataTypeKey, DataType> = {
   pulse: {
     key: "pulse",
     name: "PULSE",
-    subtitle: "Heart Data",
+    subtitle: "Hot Data",
     oneLiner:
-      "You shoot from the hip. You don't keep what you said because you've already said the next thing.",
-    ttlLabel: "60 seconds",
-    ttlSeconds: 60,
+      "Sub-second. You're hot data — too fast for any database to keep up. Even Arkiv. Honestly? You don't want to be kept up with.",
+    ttlLabel: "less than a second",
+    ttlSeconds: 1,
     vibe: "degen, hot, three rapid questions, all caps",
     swatch: { bg: "#FE7446", ink: "#111111", accent: "#181EA9" },
     mood: "incandescent",
-    trendsWith: "memecoins, sprints, the F5 key",
+    trendsWith: "RAM, pubsub, things that don't need a tx hash",
   },
   flux: {
     key: "flux",
     name: "FLUX",
-    subtitle: "Short-Term Memory",
+    subtitle: "Agent Memory",
     oneLiner:
-      "You drift. You re-read. Your memory is honest about its limits, which is a kind of clarity.",
+      "Working memory. Transparent and credible — exactly what Arkiv was built for. AI agents would build their whole brain on you.",
     ttlLabel: "1 hour",
     ttlSeconds: 60 * 60,
-    vibe: "translucent, dreamy, occasionally loses the thread",
+    vibe: "translucent, dreamy, asks about working memory",
     swatch: { bg: "#F6F4EF", ink: "#181EA9", accent: "#FE7446" },
-    mood: "drifty",
-    trendsWith: "tabs you'll close, walks, post-its",
+    mood: "drifty but indexed",
+    trendsWith: "agent state, session memory, the right kind of forgetting",
   },
   cache: {
     key: "cache",
     name: "CACHE",
-    subtitle: "The Archive",
+    subtitle: "Perfect Data",
     oneLiner:
-      "Quick, considered, performative. Built for the feed. You're the version of yourself that gets quoted.",
+      "Time-scoped, queryable, verifiable. The textbook Arkiv entity — short enough to be cheap, long enough to be useful. This is what the SDK was built for.",
     ttlLabel: "7 days",
     ttlSeconds: 60 * 60 * 24 * 7,
-    vibe: "sleek, online, ironic, curated",
+    vibe: "sleek, online, ironic, talks about indexes and freshness",
     swatch: { bg: "#181EA9", ink: "#F6F4EF", accent: "#FE7446" },
-    mood: "fresh",
-    trendsWith: "screenshots, group chats, weekly recaps",
+    mood: "fresh + verifiable",
+    trendsWith: "feeds, leaderboards, anything you want a query on",
   },
   stacks: {
     key: "stacks",
     name: "STACKS",
     subtitle: "Forever Memory",
     oneLiner:
-      "You weigh things. You'd rather be right than fast. You want the long archive — and you keep it.",
-    ttlLabel: "100 years",
+      "Forever is sweet. It's also not what Arkiv does. If you actually need 100 years you probably want a different tool — or a different idea. We can talk.",
+    ttlLabel: "100 years (good luck)",
     ttlSeconds: 60 * 60 * 24 * 365 * 100,
     vibe: "slow, sage, wood-paneled, sips tea between sentences",
     swatch: { bg: "#E9E6DE", ink: "#111111", accent: "#181EA9" },
     mood: "stately",
-    trendsWith: "journals, letters, the long now",
+    trendsWith: "journals, letters, IPFS pins, things Arkiv won't help with",
   },
 };
 

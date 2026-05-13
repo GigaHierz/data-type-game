@@ -22,10 +22,12 @@ const STAGES = [
 export function Seal({
   turns,
   entities,
+  playerName,
   onSealed,
 }: {
   turns: ChatTurn[];
   entities: RailEntity[];
+  playerName: string;
   onSealed: (out: SealOutput) => void;
 }) {
   const [stage, setStage] = useState(0);
@@ -64,6 +66,8 @@ export function Seal({
             body: JSON.stringify({
               type: result.type.key,
               arcadeScore: result.arcadeScore,
+              playerName,
+              medianLatencyMs: result.signals.medianLatencyMs,
             }),
           });
           if (sealRes.ok) {
@@ -73,10 +77,14 @@ export function Seal({
           console.error("archive/seal failed", err);
         }
 
+        // Trigger a top-5 extension pass now that the board has likely shifted.
+        // Fire-and-forget — the reveal scene will still load the board fresh.
+        void fetch("/api/leaderboard/extend", { method: "POST" }).catch(() => {});
+
         onSealed({ result, dataTypeEntity });
       })();
     }
-  }, [stage, turns, onSealed]);
+  }, [stage, turns, playerName, onSealed]);
 
   const meter = useMemo(() => Math.min(1, (stage + 1) / STAGES.length), [stage]);
 
