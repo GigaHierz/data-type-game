@@ -104,8 +104,15 @@ export function Leaderboard({
   );
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between font-mono text-[10px] tracking-widest">
+    // text-ink pinned here because the Reveal page sets `color: swatch.ink`
+    // on its container, which for CACHE/PULSE is the *light* tone — that
+    // would otherwise cascade down and make the table illegible on the
+    // sand background.
+    <div className="flex flex-col gap-2 text-ink" style={{ color: "#111111" }}>
+      <div
+        className="flex items-center justify-between font-mono text-[10px] tracking-widest"
+        style={{ color: "#111111" }}
+      >
         <span>LEADERBOARD · ARKIV-BACKED</span>
         <span className="opacity-60">
           {loading ? "loading…" : `${visibleRows.length} live`}
@@ -123,6 +130,7 @@ export function Leaderboard({
         className={`overflow-hidden rounded border border-ink bg-sand ${
           compact ? "" : "shadow-soft"
         }`}
+        style={{ color: "#111111" }}
       >
         <div
           className={`grid ${compact ? "grid-cols-[20px_1fr_52px_56px_44px]" : "grid-cols-[24px_1fr_56px_64px_48px_72px]"} gap-2 border-b border-ink/20 bg-stone/60 px-3 py-2 font-mono text-[10px] tracking-widest`}
