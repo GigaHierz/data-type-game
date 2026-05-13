@@ -77,11 +77,12 @@ function makeKey(prefix: string): string {
 export type Freshness = "fresh" | "stale" | "lost";
 
 /**
- * Freshness windows for the one-minute game. Reply within 12s and your entity
- * gets the long TTL; over 25s and it expires before sealing.
+ * Freshness windows for the one-minute game, aligned with the three latency
+ * bands. Reply within 10s (PULSE or CACHE band) → entity gets the long TTL.
+ * 10-20s (STACKS band) → stale. Beyond → lost (expires before sealing).
  */
-export const FRESH_THRESHOLD_MS = 12_000;
-export const LOST_THRESHOLD_MS = 25_000;
+export const FRESH_THRESHOLD_MS = 10_000;
+export const LOST_THRESHOLD_MS = 20_000;
 
 export function freshnessFor(latencyMs: number | null): Freshness {
   if (latencyMs == null) return "fresh";

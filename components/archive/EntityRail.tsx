@@ -16,27 +16,27 @@ export interface RailEntity extends Entity {
 
 export function EntityRail({
   entities,
-  title = "ARCHIVE · LIVE",
+  title = "STILL IN THE ARCHIVE",
   forceExpired = false,
 }: {
   entities: RailEntity[];
   title?: string;
   forceExpired?: boolean;
 }) {
-  // Tick once a second so we can drop entries the moment their TTL elapses.
+  // Tick twice a second so we can drop entries the moment their TTL elapses.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(id);
   }, []);
 
-  // Expired entities disappear from the rail entirely. Pending entities
-  // (in-flight chain writes) are always shown — they have no real createdAt
-  // and shouldn't be filtered out before their write resolves.
+  // Expired entities disappear from the rail entirely — including pending
+  // ones, since a chain write that's still pending past its own TTL is
+  // effectively dead and shouldn't keep stale text on screen.
   const visible = forceExpired
     ? []
-    : entities.filter((e) => e.pending || remainingMs(e, now) > 0);
-  const expiredCount = entities.length - visible.length - entities.filter((e) => e.pending).length;
+    : entities.filter((e) => remainingMs(e, now) > 0);
+  const expiredCount = entities.length - visible.length;
 
   return (
     <div className="flex h-full flex-col gap-2">

@@ -1,10 +1,9 @@
 import type { DataTypeKey } from "@/lib/types";
 import { Pulse } from "./Pulse";
-import { Flux } from "./Flux";
 import { Cache } from "./Cache";
 import { Stacks } from "./Stacks";
 
-export { Pulse, Flux, Cache, Stacks };
+export { Pulse, Cache, Stacks };
 
 export function CharacterSprite({
   type,
@@ -16,8 +15,6 @@ export function CharacterSprite({
   switch (type) {
     case "pulse":
       return <Pulse size={size} />;
-    case "flux":
-      return <Flux size={size} />;
     case "cache":
       return <Cache size={size} />;
     case "stacks":

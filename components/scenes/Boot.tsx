@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { Bezel } from "@/components/ui/Bezel";
 import { ArkivMark } from "@/components/ui/ArkivMark";
 import { Pulse } from "@/components/characters/Pulse";
-import { Flux } from "@/components/characters/Flux";
 import { Cache } from "@/components/characters/Cache";
 import { Stacks } from "@/components/characters/Stacks";
 
@@ -103,18 +102,15 @@ export function Boot({ onStart }: { onStart: (name: string) => void }) {
           </div>
         </div>
 
-        <div className="relative grid grid-cols-2 gap-3">
-          <div className="flex aspect-square items-center justify-center rounded border border-ink bg-stone">
-            <Pulse size={120} />
+        <div className="relative grid grid-cols-1 gap-3">
+          <div className="flex aspect-[3/2] items-center justify-center rounded border border-ink bg-stone">
+            <Pulse size={130} />
           </div>
-          <div className="flex aspect-square items-center justify-center rounded border border-ink bg-sand">
-            <Flux size={120} />
+          <div className="flex aspect-[3/2] items-center justify-center rounded border border-ink bg-arkiv-blue/10">
+            <Cache size={150} />
           </div>
-          <div className="flex aspect-square items-center justify-center rounded border border-ink bg-arkiv-blue/10">
-            <Cache size={120} />
-          </div>
-          <div className="flex aspect-square items-center justify-center rounded border border-ink bg-stone/60">
-            <Stacks size={120} />
+          <div className="flex aspect-[3/2] items-center justify-center rounded border border-ink bg-stone/60">
+            <Stacks size={140} />
           </div>
         </div>
       </div>

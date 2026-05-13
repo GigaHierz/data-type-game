@@ -6,7 +6,7 @@ import { CHARACTERS } from "@/lib/characters";
 import { CharacterSprite } from "@/components/characters";
 import type { DataTypeKey } from "@/lib/types";
 
-const KEYS: DataTypeKey[] = ["pulse", "flux", "cache", "stacks"];
+const KEYS: DataTypeKey[] = ["pulse", "cache", "stacks"];
 
 export function Connect({
   onConnected,

@@ -119,22 +119,19 @@ export function classify(allTurns: ChatTurn[]): ClassifyResult {
   const turns = effectiveTurns(allTurns);
   const rationale: string[] = [];
 
-  // Latency bucket (the headline mechanic). Aligned with Arkiv's actual
-  // product story:
-  //   < 4s  → hot data (too fast for Arkiv)        PULSE
-  //   4–8s  → agent memory / working state          FLUX
-  //   8–12s → perfect data / queryable archives     CACHE
-  //   > 12s → forever (Arkiv doesn't actually do this) STACKS
+  // Latency bands, aligned with the three-type model:
+  //   < 5s   → hot data (too fast for Arkiv)               PULSE
+  //   5–10s  → Arkiv's sweet spot (agent memory, archives) CACHE
+  //   > 10s  → forever (also not what Arkiv does)          STACKS
   const m = signals.medianLatencyMs / 1000; // seconds
   const latencyScores: Record<DataTypeKey, number> = {
-    pulse: m < 4 ? 50 : m < 6 ? 25 : 0,
-    flux: m >= 4 && m < 8 ? 50 : m >= 3 && m < 10 ? 25 : 5,
-    cache: m >= 8 && m < 12 ? 50 : m >= 6 && m < 15 ? 25 : 5,
-    stacks: m >= 12 ? 50 : m >= 9 ? 25 : 0,
+    pulse: m < 5 ? 50 : m < 7 ? 20 : 0,
+    cache: m >= 5 && m < 10 ? 50 : m < 5 ? 20 : m < 13 ? 20 : 0,
+    stacks: m >= 10 ? 50 : m >= 8 ? 20 : 0,
   };
-  if (m < 4)
+  if (m < 5)
     rationale.push(`You replied fast (median ${m.toFixed(1)}s) — hot data territory.`);
-  else if (m >= 12)
+  else if (m >= 10)
     rationale.push(`You took your time (median ${m.toFixed(1)}s) — past Arkiv's window.`);
   else
     rationale.push(`Reply latency sat at ${m.toFixed(1)}s — squarely Arkiv's band.`);
@@ -144,7 +141,6 @@ export function classify(allTurns: ChatTurn[]): ClassifyResult {
   const capsScores: Record<DataTypeKey, number> = {
     pulse: caps > 0.45 ? 20 : caps > 0.2 ? 10 : 0,
     cache: caps > 0.1 && caps < 0.3 ? 8 : 0,
-    flux: caps < 0.1 ? 6 : 0,
     stacks: caps < 0.08 ? 6 : 0,
   };
   if (caps > 0.45) rationale.push("Heavy caps — heat signature.");
@@ -154,7 +150,6 @@ export function classify(allTurns: ChatTurn[]): ClassifyResult {
   const lengthScores: Record<DataTypeKey, number> = {
     pulse: len < 25 ? 12 : len < 60 ? 4 : 0,
     cache: len >= 25 && len < 120 ? 10 : 0,
-    flux: len >= 20 && len < 200 ? 6 : 0,
     stacks: len >= 120 ? 16 : len >= 60 ? 8 : 0,
   };
   if (len > 120) rationale.push("Long-form replies — you wrote it down.");
@@ -165,17 +160,15 @@ export function classify(allTurns: ChatTurn[]): ClassifyResult {
   const emojiScores: Record<DataTypeKey, number> = {
     pulse: emoji > 0.05 ? 8 : 0,
     cache: emoji > 0.02 && emoji < 0.1 ? 8 : 0,
-    flux: 0,
     stacks: emoji === 0 ? 4 : 0,
   };
 
-  // Hedging favours FLUX.
+  // Hedging nudges toward STACKS (deliberate, soft-spoken).
   const hedge = signals.hedgeRatio;
   const hedgeScores: Record<DataTypeKey, number> = {
     pulse: hedge > 0.05 ? -8 : 0,
-    cache: 0,
-    flux: hedge > 0.03 ? 14 : 0,
-    stacks: hedge > 0.02 ? 4 : 0,
+    cache: hedge > 0.02 && hedge < 0.06 ? 4 : 0,
+    stacks: hedge > 0.04 ? 10 : 0,
   };
   if (hedge > 0.03) rationale.push("You hedged — soft edges.");
 
@@ -184,14 +177,12 @@ export function classify(allTurns: ChatTurn[]): ClassifyResult {
   const punctScores: Record<DataTypeKey, number> = {
     pulse: punct > 0.1 ? 6 : 0,
     cache: punct > 0.05 && punct < 0.15 ? 4 : 0,
-    flux: 0,
     stacks: punct < 0.02 ? 4 : 0,
   };
 
-  const keys: DataTypeKey[] = ["pulse", "flux", "cache", "stacks"];
+  const keys: DataTypeKey[] = ["pulse", "cache", "stacks"];
   const scores: Record<DataTypeKey, number> = {
     pulse: 0,
-    flux: 0,
     cache: 0,
     stacks: 0,
   };

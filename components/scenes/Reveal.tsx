@@ -25,13 +25,11 @@ export function Reveal({
 
   const verdictByType: Record<typeof type.key, string> = {
     pulse:
-      "You burned through it. The archive could barely write you down. Hot data lives in RAM — Arkiv is not your tool here, and that's a compliment.",
-    flux:
-      "Drifty, transparent, just-fast-enough. You're exactly the shape Arkiv was built around. An AI agent would store its whole memory on you.",
+      "You burned through it. The archive could barely write you down. Hot data lives in RAM — Arkiv isn't your tool here, and honestly that's a compliment.",
     cache:
-      "Punchy and verifiable. Time-scoped, queryable, fresh. You are the textbook Arkiv entity — short enough to be cheap, long enough to matter.",
+      "Fast, structured, verifiable. You are the textbook Arkiv entity — fresh enough to feel live, structured enough to keep. Agent memory, leaderboards, indexed feeds. This is the sweet spot.",
     stacks:
-      "Beautiful answers. Way too slow for Arkiv though. Arkiv doesn't really do forever — if you need 100 years, maybe carve it in stone instead. Or rethink the idea.",
+      "Beautiful, deliberate answers. Way too slow for Arkiv though. Arkiv doesn't really do forever — if you need 100 years, maybe carve it in stone instead. Or rethink the idea.",
   };
 
   const swatch = type.swatch;
@@ -176,7 +174,7 @@ export function Reveal({
               {showBoard ? (
                 <Leaderboard highlightName={playerName} compact />
               ) : (
-                <EntityRail entities={entities} title="ARCHIVE · SURVIVORS" />
+                <EntityRail entities={entities} title="STILL IN THE ARCHIVE" />
               )}
             </div>
           </div>

@@ -1,4 +1,4 @@
-export type DataTypeKey = "pulse" | "flux" | "cache" | "stacks";
+export type DataTypeKey = "pulse" | "cache" | "stacks";
 
 export interface DataType {
   key: DataTypeKey;

@@ -8,10 +8,10 @@ import type { DataType, DataTypeKey } from "./types";
  *   STACKS → ExpirationTime.fromDays(36500)
  */
 /**
- * The four data types. Two of them (FLUX, CACHE) sit inside Arkiv's actual
- * sweet spot — short-term, transparent, queryable. PULSE is too fast for
- * Arkiv (hot data lives in RAM); STACKS is too slow (Arkiv doesn't do forever).
- * The reveal calls those two out — gently — as "maybe Arkiv isn't your tool."
+ * Three data types, banded by reply latency:
+ *   < 5s   → PULSE   (hot data — too fast for Arkiv)
+ *   5–10s  → CACHE   (Arkiv's sweet spot — agent memory, verifiable archives)
+ *   > 10s  → STACKS  (forever — also not what Arkiv does, gently)
  */
 export const CHARACTERS: Record<DataTypeKey, DataType> = {
   pulse: {
@@ -27,31 +27,18 @@ export const CHARACTERS: Record<DataTypeKey, DataType> = {
     mood: "incandescent",
     trendsWith: "RAM, pubsub, things that don't need a tx hash",
   },
-  flux: {
-    key: "flux",
-    name: "FLUX",
-    subtitle: "Agent Memory",
-    oneLiner:
-      "Working memory. Transparent and credible — exactly what Arkiv was built for. AI agents would build their whole brain on you.",
-    ttlLabel: "1 hour",
-    ttlSeconds: 60 * 60,
-    vibe: "translucent, dreamy, asks about working memory",
-    swatch: { bg: "#F6F4EF", ink: "#181EA9", accent: "#FE7446" },
-    mood: "drifty but indexed",
-    trendsWith: "agent state, session memory, the right kind of forgetting",
-  },
   cache: {
     key: "cache",
     name: "CACHE",
-    subtitle: "Perfect Data",
+    subtitle: "Arkiv Data",
     oneLiner:
-      "Time-scoped, queryable, verifiable. The textbook Arkiv entity — short enough to be cheap, long enough to be useful. This is what the SDK was built for.",
-    ttlLabel: "7 days",
+      "Time-scoped, transparent, queryable, verifiable. You are the textbook Arkiv entity — fast enough to feel live, structured enough to keep around. This is what Arkiv was built for: agent memory, leaderboards, indexed feeds. The sweet spot.",
+    ttlLabel: "seconds to weeks",
     ttlSeconds: 60 * 60 * 24 * 7,
     vibe: "sleek, online, ironic, talks about indexes and freshness",
     swatch: { bg: "#181EA9", ink: "#F6F4EF", accent: "#FE7446" },
     mood: "fresh + verifiable",
-    trendsWith: "feeds, leaderboards, anything you want a query on",
+    trendsWith: "agent state, leaderboards, feeds, anything you want a query on",
   },
   stacks: {
     key: "stacks",
@@ -80,16 +67,6 @@ export const SCRIPTED_QUESTIONS: Record<DataTypeKey, string[]> = {
     "ONE SECOND TAKE: DELETE OR KEEP YOUR ENTIRE INBOX??",
     "GO FAST: SAVE FOREVER OR LIVE IN THE MOMENT??",
     "WHAT'S A FILE YOU NUKED AND NEVER MISSED??",
-  ],
-  flux: [
-    "What's a tab you've kept open for... way too long?",
-    "If your phone wiped everything tonight... what would you actually miss?",
-    "Tell me something you almost forgot to save.",
-    "What's a memory that... slipped through? Not bad. Just gone.",
-    "Do you ever... search your own messages to remember what you said?",
-    "What's one file you keep moving from laptop to laptop?",
-    "If you could save just one screenshot from today, which?",
-    "What's a thing you wrote down so you'd stop holding it?",
   ],
   cache: [
     "What's an archive you scroll for fun — old tweets, photos, anything?",
@@ -138,11 +115,9 @@ export function systemPromptFor(key: DataTypeKey): string {
     `- Match your voice strictly:`,
     key === "pulse"
       ? `  PULSE speaks IN ALL CAPS, asks rapid 3-second-take questions about data, no follow-ups, lots of energy.`
-      : key === "flux"
-        ? `  FLUX speaks softly, uses ellipses, occasionally loses the thread, asks dreamy questions about memory.`
-        : key === "cache"
-          ? `  CACHE speaks like a very online editor — punchy, dry, slightly ironic, asks about feeds and archives.`
-          : `  STACKS speaks slowly, like a kind historian — uses "in my day", asks about heirlooms, stories, the long archive.`,
+      : key === "cache"
+        ? `  CACHE speaks like a very online editor — punchy, dry, slightly ironic, asks about feeds and archives.`
+        : `  STACKS speaks slowly, like a kind historian — uses "in my day", asks about heirlooms, stories, the long archive.`,
     `- Never explain the game, never mention "data type" or "classifier".`,
     `- React to reply latency: if the user replies slowly, gently note it in-character; if too fast, also note it in-character.`,
     `Begin the next message as your next in-character question about the archive.`,

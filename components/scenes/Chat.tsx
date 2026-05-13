@@ -9,8 +9,8 @@ import { createReplyEntity, freshnessFor } from "@/lib/arkiv-store";
 import type { ChatTurn, DataTypeKey } from "@/lib/types";
 
 /** Game timing — keep in sync with FRESH_THRESHOLD_MS / LOST_THRESHOLD_MS in lib/arkiv-store.ts. */
-const FRESH_WINDOW_MS = 12_000;
-const LOST_THRESHOLD_MS = 25_000;
+const FRESH_WINDOW_MS = 10_000;
+const LOST_THRESHOLD_MS = 20_000;
 /** Total game length. After this, the chat auto-seals regardless of how far you got. */
 const GAME_DURATION_MS = 60_000;
 
