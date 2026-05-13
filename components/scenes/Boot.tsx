@@ -1,0 +1,82 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Bezel } from "@/components/ui/Bezel";
+import { ArkivMark } from "@/components/ui/ArkivMark";
+import { Pulse } from "@/components/characters/Pulse";
+import { Flux } from "@/components/characters/Flux";
+import { Cache } from "@/components/characters/Cache";
+import { Stacks } from "@/components/characters/Stacks";
+
+const BOOT_LINES = [
+  "> opening port 8086",
+  "> attaching to braga.hoodi.arkiv.network/rpc",
+  "> negotiating ExpirationTime…",
+  "> indexing 4 in-character nodes",
+  "> READY",
+];
+
+export function Boot({ onStart }: { onStart: () => void }) {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    if (step < BOOT_LINES.length) {
+      const id = setTimeout(() => setStep((s) => s + 1), 380);
+      return () => clearTimeout(id);
+    }
+  }, [step]);
+  const done = step >= BOOT_LINES.length;
+
+  return (
+    <Bezel title="ARKIV · DATA TYPE GAME" status="boot.sh">
+      <div className="crt relative grid min-h-[560px] grid-cols-1 gap-6 bg-sand p-6 md:grid-cols-[1fr_320px]">
+        <div className="flex flex-col justify-between">
+          <div>
+            <ArkivMark />
+            <h1 className="mt-6 max-w-md font-mono text-4xl leading-tight md:text-5xl">
+              You'll chat with a computer
+              <br />
+              <span className="text-arkiv-blue">for 4 minutes.</span>
+            </h1>
+            <p className="mt-5 max-w-md text-base leading-relaxed">
+              Every reply is written to <em>the archive</em> as an entity with
+              its own expiration timer. The faster you reply, the longer it
+              lives. The slower you reply, the more you say about yourself.
+              At the end, we tell you which <b>data type</b> you are. Then the
+              chat dissolves. Your type doesn't.
+            </p>
+            <button
+              onClick={onStart}
+              disabled={!done}
+              className="mt-8 inline-flex items-center gap-3 rounded border-2 border-ink bg-arkiv-orange px-5 py-3 font-mono text-sm uppercase tracking-widest text-ink shadow-bezel transition active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <span>{done ? "boot the archive" : "loading…"}</span>
+              <span aria-hidden>›</span>
+            </button>
+          </div>
+
+          <div className="mt-8 rounded border border-ink/30 bg-stone/50 p-3 font-mono text-xs leading-relaxed">
+            {BOOT_LINES.slice(0, step).map((l, i) => (
+              <div key={i}>{l}</div>
+            ))}
+            {!done && <div className="caret">{BOOT_LINES[step] ?? ""}</div>}
+          </div>
+        </div>
+
+        <div className="relative grid grid-cols-2 gap-3">
+          <div className="flex aspect-square items-center justify-center rounded border border-ink bg-stone">
+            <Pulse size={120} />
+          </div>
+          <div className="flex aspect-square items-center justify-center rounded border border-ink bg-sand">
+            <Flux size={120} />
+          </div>
+          <div className="flex aspect-square items-center justify-center rounded border border-ink bg-arkiv-blue/10">
+            <Cache size={120} />
+          </div>
+          <div className="flex aspect-square items-center justify-center rounded border border-ink bg-stone/60">
+            <Stacks size={120} />
+          </div>
+        </div>
+      </div>
+    </Bezel>
+  );
+}

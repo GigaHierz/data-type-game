@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+
+html,
+body {
+  background: #F6F4EF; /* Sand */
+  color: #111111; /* Ink */
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11", "cv02";
+}
+
+/* Subtle CRT scanlines + grain — used in scene wrappers. */
+.crt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(17, 17, 17, 0.05) 0px,
+    rgba(17, 17, 17, 0.05) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+  z-index: 50;
+}
+
+.crt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 50%,
+    rgba(0, 0, 0, 0.12) 100%
+  );
+  z-index: 51;
+}
+
+/* Window-bezel — Y2K terminal frame. */
+.bezel {
+  background: #E9E6DE;
+  border: 1px solid #111111;
+  box-shadow:
+    inset 1px 1px 0 0 #ffffffaa,
+    inset -1px -1px 0 0 #00000022,
+    0 6px 0 0 #111111;
+  border-radius: 6px;
+}
+
+.bezel-strip {
+  background: linear-gradient(180deg, #E9E6DE, #d6d2c4);
+  border-bottom: 1px solid #111111;
+  font-family: var(--font-mono);
+}
+
+/* Marquee for boot/intro. */
+.marquee {
+  background: linear-gradient(
+    90deg,
+    #181EA9 0%,
+    #181EA9 30%,
+    #FE7446 50%,
+    #181EA9 70%,
+    #181EA9 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* Pixel "asciii dust" used in aftermath. */
+.dust {
+  background-image:
+    radial-gradient(#111 0.5px, transparent 0.5px),
+    radial-gradient(#111 0.5px, transparent 0.5px);
+  background-size: 6px 6px, 7px 7px;
+  background-position: 0 0, 3px 3px;
+  opacity: 0.18;
+}
+
+/* Soft caret blink for terminal prompts. */
+@keyframes caret {
+  50% { opacity: 0; }
+}
+.caret::after {
+  content: "▌";
+  margin-left: 2px;
+  animation: caret 1s steps(1) infinite;
+}
+
+/* Fresh / stale / lost colour tokens. */
+.fresh { color: #181EA9; }
+.stale { color: #b56a35; }
+.lost  { color: #888; text-decoration: line-through; }
+
+/* Disable selection on the chrome but allow it on text. */
+.bezel-strip { user-select: none; }
