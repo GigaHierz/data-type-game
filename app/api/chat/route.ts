@@ -26,9 +26,16 @@ export async function POST(req: Request) {
   const agentTurns = body.history.filter((h) => h.role === "agent").length;
   const userTurns = body.history.filter((h) => h.role === "user").length;
 
-  // PULSE caps at 3 questions, others at ~5.
-  const cap = body.character === "pulse" ? 3 : 5;
+  // One-minute archive quiz: exactly 3 questions per character. The scripted
+  // fallback in lib/characters.ts has exactly 3 entries per character to match
+  // this cap — never reduce one without the other or the script repeats.
+  const cap = 3;
   if (agentTurns >= cap && userTurns >= cap) {
+    return NextResponse.json({ done: true, content: null });
+  }
+  // Defensive: if the script is shorter than the cap, stop instead of repeating.
+  const scriptLen = SCRIPTED_QUESTIONS[body.character]?.length ?? 0;
+  if (!process.env.ANTHROPIC_API_KEY && agentTurns >= scriptLen) {
     return NextResponse.json({ done: true, content: null });
   }
 

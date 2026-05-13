@@ -8,8 +8,11 @@ import { CHARACTERS } from "@/lib/characters";
 import { createReplyEntity, freshnessFor } from "@/lib/arkiv-store";
 import type { ChatTurn, DataTypeKey } from "@/lib/types";
 
-const FRESH_WINDOW_MS = 30_000;
-const LOST_THRESHOLD_MS = 60_000;
+/** Game timing — keep in sync with FRESH_THRESHOLD_MS / LOST_THRESHOLD_MS in lib/arkiv-store.ts. */
+const FRESH_WINDOW_MS = 12_000;
+const LOST_THRESHOLD_MS = 25_000;
+/** Total game length. After this, the chat auto-seals regardless of how far you got. */
+const GAME_DURATION_MS = 60_000;
 
 export function Chat({
   character,
@@ -33,6 +36,10 @@ export function Chat({
   // the agent's response landing and onComplete firing).
   const turnsRef = useRef<ChatTurn[]>([]);
   const entitiesRef = useRef<RailEntity[]>([]);
+  // Total-game countdown. Set once on mount; never reset.
+  const gameStartRef = useRef<number>(Date.now());
+  // Onсе set, prevents the timeout from also firing onComplete twice.
+  const completedRef = useRef(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +48,17 @@ export function Chat({
     const id = setInterval(() => setNow(Date.now()), 200);
     return () => clearInterval(id);
   }, []);
+
+  // Hard time limit: 60s and we seal no matter what.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (completedRef.current) return;
+      completedRef.current = true;
+      setAgentDone(true);
+      onComplete(turnsRef.current, entitiesRef.current);
+    }, GAME_DURATION_MS);
+    return () => clearTimeout(id);
+  }, [onComplete]);
 
   // Request the next agent question.
   const askNext = useCallback(
@@ -63,10 +81,11 @@ export function Chat({
           setThinking(false);
           // Read latest turns/entities from refs — by the time the agent
           // returns "done", several setState batches may still be pending.
-          setTimeout(
-            () => onComplete(turnsRef.current, entitiesRef.current),
-            1200,
-          );
+          setTimeout(() => {
+            if (completedRef.current) return;
+            completedRef.current = true;
+            onComplete(turnsRef.current, entitiesRef.current);
+          }, 1200);
           return;
         }
         const agentTurn: ChatTurn = {
@@ -182,8 +201,22 @@ export function Chat({
     return Math.min(100, s);
   }, [turns]);
 
+  // Total-game countdown shown in the bezel.
+  const gameRemaining = Math.max(0, GAME_DURATION_MS - (now - gameStartRef.current));
+  const gameLow = gameRemaining < 15_000;
+
   return (
-    <Bezel title={`ARKIV · CHAT WITH ${char.name}`} status={`score ${score}/100`}>
+    <Bezel
+      title={`ARKIV · ARCHIVE QUIZ · ${char.name}`}
+      status={
+        <span className="flex items-center gap-3">
+          <span className={gameLow ? "text-arkiv-orange" : ""}>
+            ⏱ {(gameRemaining / 1000).toFixed(1)}s
+          </span>
+          <span>score {score}/100</span>
+        </span>
+      }
+    >
       <div className="crt relative grid min-h-[640px] grid-cols-1 bg-sand md:grid-cols-[1fr_280px]">
         {/* Conversation column */}
         <div className="flex flex-col p-5">

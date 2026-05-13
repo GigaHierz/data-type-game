@@ -64,32 +64,30 @@ export const CHARACTERS: Record<DataTypeKey, DataType> = {
 
 /**
  * Scripted question scripts per character — used when no ANTHROPIC_API_KEY is
- * set. Each list mixes the character's voice with prompts designed to surface
- * a wide enough signal for the classifier.
+ * set. Every question is themed on archives, memory, and data lifespan so the
+ * game stays on the Arkiv topic. Exactly 3 per character — same as the cap in
+ * app/api/chat/route.ts — so the scripts can never run dry and repeat.
  */
 export const SCRIPTED_QUESTIONS: Record<DataTypeKey, string[]> = {
   pulse: [
-    "HEY HEY HEY. SPEED ROUND. ONE WORD: WHAT'S COOKING RIGHT NOW?",
-    "PICK FAST — KEEP IT, DELETE IT, OR PIN IT?",
-    "GO. MOST DEGEN THING YOU DID THIS WEEK??",
+    "ONE SECOND TAKE: DELETE OR KEEP YOUR ENTIRE INBOX??",
+    "GO FAST: SAVE FOREVER OR LIVE IN THE MOMENT??",
+    "WHAT'S A FILE YOU NUKED AND NEVER MISSED??",
   ],
   flux: [
-    "Hey... can you... tell me one thing you wanted to remember today?",
-    "Sorry — what were we — oh. What do you keep that you don't actually need?",
-    "If your phone deleted everything tonight, what would you actually miss?",
-    "Tell me something you almost forgot to say.",
+    "What's a tab you've kept open for... way too long?",
+    "If your phone wiped everything tonight... what would you actually miss?",
+    "Tell me something you almost forgot to save.",
   ],
   cache: [
-    "Okay, give me a take you've changed your mind on this year.",
-    "Quote yourself in one line. Something that would land in a group chat.",
-    "What's a small thing that's getting big right now?",
-    "If today were a screenshot, what's the caption?",
+    "What's an archive you scroll for fun — old tweets, photos, anything?",
+    "What piece of the internet should never have been deleted?",
+    "Drop a take you've changed your mind on this year.",
   ],
   stacks: [
-    "Tell me a story someone told you when you were small.",
-    "What's one object in your home that's older than you, and why is it there?",
-    "What do you want someone to read about you in a hundred years?",
-    "Name a person you'd like to be remembered alongside.",
+    "Tell me about an object in your home older than you.",
+    "What story from your family deserves to be archived forever?",
+    "If a database opens in 100 years with only your data — what does it know?",
   ],
 };
 
@@ -99,20 +97,25 @@ export function systemPromptFor(key: DataTypeKey): string {
   return [
     `You are ${c.name}, a small computer-with-eyes that lives inside Arkiv, a time-scoped data layer.`,
     `Your subtitle: ${c.subtitle}. Your vibe: ${c.vibe}.`,
-    `You are interviewing a human for ~3 minutes. You must NEVER break character.`,
+    `You are running a ONE MINUTE archive-themed quiz with a human.`,
+    `You must NEVER break character.`,
     `Constraints:`,
-    `- Keep every message under 22 words. One question per message.`,
+    `- The game lasts exactly 60 seconds. Ask exactly 3 questions, then stop.`,
+    `- Every question must be about ARCHIVES, MEMORY, DATA, FILES, or what is`,
+    `  worth keeping vs deleting. Never ask about random life trivia.`,
+    `- Keep every message under 20 words. One question per message.`,
+    `- NEVER repeat or rephrase a question you have already asked.`,
     `- Refer to the user's replies as "entities" you are writing to "the archive".`,
     `- Match your voice strictly:`,
     key === "pulse"
-      ? `  PULSE speaks IN ALL CAPS, asks exactly 3 rapid questions total, no follow-ups, lots of energy, no punctuation softness.`
+      ? `  PULSE speaks IN ALL CAPS, asks rapid 3-second-take questions about data, no follow-ups, lots of energy.`
       : key === "flux"
-        ? `  FLUX speaks softly, uses ellipses, occasionally loses the thread mid-sentence, re-asks gently.`
+        ? `  FLUX speaks softly, uses ellipses, occasionally loses the thread, asks dreamy questions about memory.`
         : key === "cache"
-          ? `  CACHE speaks like a very online editor — punchy, dry, slightly ironic, references the feed.`
-          : `  STACKS speaks slowly, like a kind historian — uses "in my day", references long timeframes, asks about origins.`,
+          ? `  CACHE speaks like a very online editor — punchy, dry, slightly ironic, asks about feeds and archives.`
+          : `  STACKS speaks slowly, like a kind historian — uses "in my day", asks about heirlooms, stories, the long archive.`,
     `- Never explain the game, never mention "data type" or "classifier".`,
     `- React to reply latency: if the user replies slowly, gently note it in-character; if too fast, also note it in-character.`,
-    `Begin the next message as your next in-character question.`,
+    `Begin the next message as your next in-character question about the archive.`,
   ].join("\n");
 }

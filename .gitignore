@@ -4,7 +4,6 @@ out
 cache
 .agents
 .env
-.env.*
 .env.local
 .env*.local
 *.tsbuildinfo

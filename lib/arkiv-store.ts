@@ -76,11 +76,17 @@ function makeKey(prefix: string): string {
 
 export type Freshness = "fresh" | "stale" | "lost";
 
-/** Freshness bucket from reply latency. Drives TTL, score, and classifier weight. */
+/**
+ * Freshness windows for the one-minute game. Reply within 12s and your entity
+ * gets the long TTL; over 25s and it expires before sealing.
+ */
+export const FRESH_THRESHOLD_MS = 12_000;
+export const LOST_THRESHOLD_MS = 25_000;
+
 export function freshnessFor(latencyMs: number | null): Freshness {
   if (latencyMs == null) return "fresh";
-  if (latencyMs < 30_000) return "fresh";
-  if (latencyMs < 60_000) return "stale";
+  if (latencyMs < FRESH_THRESHOLD_MS) return "fresh";
+  if (latencyMs < LOST_THRESHOLD_MS) return "stale";
   return "lost";
 }
 
@@ -89,9 +95,9 @@ export function ttlForFreshness(f: Freshness): number {
     case "fresh":
       return ExpirationTime.fromSeconds(60);
     case "stale":
-      return ExpirationTime.fromSeconds(30);
+      return ExpirationTime.fromSeconds(20);
     case "lost":
-      return ExpirationTime.fromSeconds(10);
+      return ExpirationTime.fromSeconds(5);
   }
 }
 

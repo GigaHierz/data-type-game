@@ -33,16 +33,16 @@ export function Boot({ onStart }: { onStart: () => void }) {
           <div>
             <ArkivMark />
             <h1 className="mt-6 max-w-md font-mono text-4xl leading-tight md:text-5xl">
-              You'll chat with a computer
+              A 60-second quiz
               <br />
-              <span className="text-arkiv-blue">for 4 minutes.</span>
+              <span className="text-arkiv-blue">about the archive.</span>
             </h1>
             <p className="mt-5 max-w-md text-base leading-relaxed">
-              Every reply is written to <em>the archive</em> as an entity with
-              its own expiration timer. The faster you reply, the longer it
-              lives. The slower you reply, the more you say about yourself.
-              At the end, we tell you which <b>data type</b> you are. Then the
-              chat dissolves. Your type doesn't.
+              A computer asks you three questions about memory, data, and what's
+              worth keeping. Every reply is written to <em>the archive</em> as
+              an entity with its own expiration timer. The faster you reply,
+              the longer it lives. At the end, we tell you which <b>data type</b>
+              you are. Then the chat dissolves. Your type doesn't.
             </p>
             <button
               onClick={onStart}

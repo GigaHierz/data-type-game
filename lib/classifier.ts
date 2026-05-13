@@ -119,16 +119,17 @@ export function classify(allTurns: ChatTurn[]): ClassifyResult {
   const turns = effectiveTurns(allTurns);
   const rationale: string[] = [];
 
-  // Latency bucket (the headline mechanic).
+  // Latency bucket (the headline mechanic). Scaled for the one-minute game:
+  // 3s · 8s · 15s · 25s — see FRESH_THRESHOLD_MS / LOST_THRESHOLD_MS.
   const m = signals.medianLatencyMs / 1000; // seconds
   const latencyScores: Record<DataTypeKey, number> = {
-    pulse: m < 4 ? 50 : m < 8 ? 30 : m < 15 ? 10 : 0,
-    cache: m >= 4 && m < 15 ? 50 : m < 4 ? 25 : m < 30 ? 20 : 5,
-    flux: m >= 12 && m < 45 ? 50 : m >= 8 && m < 60 ? 25 : 5,
-    stacks: m >= 35 ? 50 : m >= 20 ? 25 : 0,
+    pulse: m < 3 ? 50 : m < 5 ? 30 : m < 8 ? 10 : 0,
+    cache: m >= 3 && m < 8 ? 50 : m < 3 ? 25 : m < 15 ? 20 : 5,
+    flux: m >= 7 && m < 18 ? 50 : m >= 5 && m < 25 ? 25 : 5,
+    stacks: m >= 15 ? 50 : m >= 10 ? 25 : 0,
   };
-  if (m < 4) rationale.push(`You replied fast (median ${m.toFixed(1)}s).`);
-  else if (m > 35) rationale.push(`You took your time (median ${m.toFixed(1)}s).`);
+  if (m < 3) rationale.push(`You replied fast (median ${m.toFixed(1)}s).`);
+  else if (m > 15) rationale.push(`You took your time (median ${m.toFixed(1)}s).`);
   else rationale.push(`Reply latency sat at ${m.toFixed(1)}s — mid-band.`);
 
   // Caps ratio favours PULSE.
