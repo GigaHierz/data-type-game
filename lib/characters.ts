@@ -63,10 +63,11 @@ export const CHARACTERS: Record<DataTypeKey, DataType> = {
 };
 
 /**
- * Scripted question scripts per character — used when no ANTHROPIC_API_KEY is
- * set. Every question is themed on archives, memory, and data lifespan so the
- * game stays on the Arkiv topic. Exactly 3 per character — same as the cap in
- * app/api/chat/route.ts — so the scripts can never run dry and repeat.
+ * Scripted question scripts per character — used when ANTHROPIC_API_KEY is
+ * unset. All questions are themed on archives, memory, files, and what is
+ * worth keeping. PULSE only ever asks 3 (it's the degen character — by
+ * design). The other three ask as many as the 60-second timer allows, so
+ * their scripts run longer for the fallback case.
  */
 export const SCRIPTED_QUESTIONS: Record<DataTypeKey, string[]> = {
   pulse: [
@@ -78,33 +79,55 @@ export const SCRIPTED_QUESTIONS: Record<DataTypeKey, string[]> = {
     "What's a tab you've kept open for... way too long?",
     "If your phone wiped everything tonight... what would you actually miss?",
     "Tell me something you almost forgot to save.",
+    "What's a memory that... slipped through? Not bad. Just gone.",
+    "Do you ever... search your own messages to remember what you said?",
+    "What's one file you keep moving from laptop to laptop?",
+    "If you could save just one screenshot from today, which?",
+    "What's a thing you wrote down so you'd stop holding it?",
   ],
   cache: [
     "What's an archive you scroll for fun — old tweets, photos, anything?",
     "What piece of the internet should never have been deleted?",
     "Drop a take you've changed your mind on this year.",
+    "If today were a screenshot, what's the caption?",
+    "What's a group chat that doubles as your real history?",
+    "Cache this: a sentence you want to be quoted on later.",
+    "What's something worth indexing about right now, before it ages?",
+    "If your camera roll were public for an hour, what would trend?",
   ],
   stacks: [
     "Tell me about an object in your home older than you.",
     "What story from your family deserves to be archived forever?",
     "If a database opens in 100 years with only your data — what does it know?",
+    "What's something you'd like someone to read about you in a hundred years?",
+    "Who in your life kept the best records, and what did they keep?",
+    "What's a letter you wish someone had thought to save?",
+    "Name a place that should never be allowed to forget itself.",
+    "If you could write one paragraph into the long archive, what would it say?",
   ],
 };
 
 /** System prompt builder for the Anthropic call. */
 export function systemPromptFor(key: DataTypeKey): string {
   const c = CHARACTERS[key];
+  const limitRule =
+    key === "pulse"
+      ? "Ask EXACTLY 3 questions across the whole conversation, then stop responding."
+      : "Keep asking questions until the runtime tells you to stop. There is no fixed number — the game has a 60-second timer so the player decides how many fit. Aim for a steady flow of fresh questions.";
+
   return [
     `You are ${c.name}, a small computer-with-eyes that lives inside Arkiv, a time-scoped data layer.`,
     `Your subtitle: ${c.subtitle}. Your vibe: ${c.vibe}.`,
-    `You are running a ONE MINUTE archive-themed quiz with a human.`,
+    `You are running a 60-second archive-themed quiz with a human.`,
     `You must NEVER break character.`,
     `Constraints:`,
-    `- The game lasts exactly 60 seconds. Ask exactly 3 questions, then stop.`,
+    `- ${limitRule}`,
     `- Every question must be about ARCHIVES, MEMORY, DATA, FILES, or what is`,
-    `  worth keeping vs deleting. Never ask about random life trivia.`,
+    `  worth keeping vs deleting. Never ask about random life trivia unless`,
+    `  you can clearly tie it back to memory / preservation / archive.`,
     `- Keep every message under 20 words. One question per message.`,
-    `- NEVER repeat or rephrase a question you have already asked.`,
+    `- NEVER repeat or rephrase a question you have already asked. Each turn`,
+    `  must introduce a genuinely new angle on the archive theme.`,
     `- Refer to the user's replies as "entities" you are writing to "the archive".`,
     `- Match your voice strictly:`,
     key === "pulse"

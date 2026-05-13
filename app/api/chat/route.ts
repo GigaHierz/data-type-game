@@ -26,14 +26,14 @@ export async function POST(req: Request) {
   const agentTurns = body.history.filter((h) => h.role === "agent").length;
   const userTurns = body.history.filter((h) => h.role === "user").length;
 
-  // One-minute archive quiz: exactly 3 questions per character. The scripted
-  // fallback in lib/characters.ts has exactly 3 entries per character to match
-  // this cap — never reduce one without the other or the script repeats.
-  const cap = 3;
-  if (agentTurns >= cap && userTurns >= cap) {
+  // PULSE is the only character with a hard question cap — that's the spec
+  // ("it's just three questions"). The other three ask as many as fit in the
+  // 60-second game timer; the client's hard stop seals the chat at 60s.
+  if (body.character === "pulse" && agentTurns >= 3 && userTurns >= 3) {
     return NextResponse.json({ done: true, content: null });
   }
-  // Defensive: if the script is shorter than the cap, stop instead of repeating.
+  // Defensive: if the script is shorter than what's been asked (scripted-fallback
+  // path only), stop instead of repeating the last question.
   const scriptLen = SCRIPTED_QUESTIONS[body.character]?.length ?? 0;
   if (!process.env.ANTHROPIC_API_KEY && agentTurns >= scriptLen) {
     return NextResponse.json({ done: true, content: null });
