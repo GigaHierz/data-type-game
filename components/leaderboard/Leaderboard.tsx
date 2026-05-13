@@ -117,18 +117,22 @@ export function Leaderboard({
         </span>
       </div>
 
+      {/* Compact mode (Reveal sidebar) drops the TTL column — five columns
+          fit cleanly in a ~280px panel. The full /leaderboard page keeps TTL. */}
       <div
         className={`overflow-hidden rounded border border-ink bg-sand ${
           compact ? "" : "shadow-soft"
         }`}
       >
-        <div className="grid grid-cols-[24px_1fr_56px_48px_48px_72px] gap-2 border-b border-ink/20 bg-stone/60 px-3 py-2 font-mono text-[10px] tracking-widest">
+        <div
+          className={`grid ${compact ? "grid-cols-[20px_1fr_52px_56px_44px]" : "grid-cols-[24px_1fr_56px_64px_48px_72px]"} gap-2 border-b border-ink/20 bg-stone/60 px-3 py-2 font-mono text-[10px] tracking-widest`}
+        >
           <span>#</span>
           <span>NAME</span>
           <span className="text-right">TYPE</span>
           <span className="text-right">SCORE</span>
           <span className="text-right">RIGHT</span>
-          <span className="text-right">TTL</span>
+          {!compact && <span className="text-right">TTL</span>}
         </div>
 
         {visibleRows.length === 0 ? (
@@ -148,7 +152,7 @@ export function Leaderboard({
             return (
               <div
                 key={r.entityKey || `${r.name}-${i}`}
-                className={`grid grid-cols-[24px_1fr_56px_48px_48px_72px] gap-2 border-b border-ink/10 px-3 py-2 font-mono text-xs transition-colors last:border-b-0 ${
+                className={`grid ${compact ? "grid-cols-[20px_1fr_52px_56px_44px]" : "grid-cols-[24px_1fr_56px_64px_48px_72px]"} gap-2 border-b border-ink/10 px-3 py-2 font-mono text-xs transition-colors last:border-b-0 ${
                   isMe
                     ? "bg-arkiv-orange/15"
                     : flash
@@ -180,18 +184,20 @@ export function Leaderboard({
                   {char.name}
                 </span>
                 <span className="text-right tabular-nums">
-                  {r.arcadeScore.toLocaleString()}
+                  {r.arcadeScore > 0 ? r.arcadeScore.toLocaleString() : "—"}
                 </span>
                 <span className="text-right tabular-nums">
                   {r.totalAnswered > 0 ? `${r.correctPct}%` : "—"}
                 </span>
-                <span
-                  className={`text-right tabular-nums ${
-                    remaining < 60_000 ? "text-arkiv-orange" : "opacity-80"
-                  }`}
-                >
-                  {formatRemaining(remaining)}
-                </span>
+                {!compact && (
+                  <span
+                    className={`text-right tabular-nums ${
+                      remaining < 60_000 ? "text-arkiv-orange" : "opacity-80"
+                    }`}
+                  >
+                    {formatRemaining(remaining)}
+                  </span>
+                )}
               </div>
             );
           })
