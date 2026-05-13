@@ -94,24 +94,36 @@ export async function POST(req: Request) {
           .join(", ")}]`
       : "";
 
-    const messages = body.history.map((h) => ({
+    const history = body.history.map((h) => ({
       role: h.role === "agent" ? ("assistant" as const) : ("user" as const),
       content: h.content,
     }));
-    // Seed with a user-side nudge if no history (Anthropic requires a user turn first).
-    if (messages.length === 0 || messages[0].role === "assistant") {
-      messages.unshift({ role: "user", content: "ready" });
-    }
+    // Anthropic requires the conversation to start with a user turn. Always
+    // prepend an explicit JSON-only instruction so Claude doesn't slip into
+    // conversational mode on the first turn.
+    const seed = {
+      role: "user" as const,
+      content:
+        "Generate the next multiple-choice question for the player. Return ONLY a JSON object exactly like: " +
+        '{"question":"...","options":["...","...","..."]}. ' +
+        "No code fences, no prose, no leading or trailing text.",
+    };
+    const messages = [seed, ...history];
 
     try {
       const msg = await client.messages.create({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 200,
+        max_tokens: 300,
+        // Pre-fill the assistant turn with the opening "{" so the model has
+        // to continue valid JSON. This is the standard Anthropic trick for
+        // forcing structured output without tool_use.
         system: systemPromptFor(body.character) + latencyNote + askedNote,
-        messages,
+        messages: [...messages, { role: "assistant" as const, content: "{" }],
       });
       const textBlock = msg.content.find((c) => c.type === "text");
-      const text = textBlock && textBlock.type === "text" ? textBlock.text : "";
+      // Re-attach the pre-filled "{" so the parser sees a complete object.
+      const text =
+        "{" + (textBlock && textBlock.type === "text" ? textBlock.text : "");
       const parsed = parseLlmJson(text);
       if (parsed) {
         return NextResponse.json({
