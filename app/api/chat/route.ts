@@ -79,6 +79,7 @@ export async function POST(req: Request) {
 
   const apiKey = anthropicKey();
 
+  let debug: { stage: string; detail?: string } | null = null;
   // LLM-driven multiple-choice generation.
   if (apiKey) {
     const client = new Anthropic({ apiKey });
@@ -134,8 +135,11 @@ export async function POST(req: Request) {
         });
       }
       console.warn("[chat] LLM returned unparseable text, falling back to scripted:", text);
+      debug = { stage: "parse-failed", detail: text.slice(0, 200) };
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error("[chat] anthropic error, falling back to scripted:", err);
+      debug = { stage: "anthropic-threw", detail: msg };
     }
   }
 
@@ -149,5 +153,6 @@ export async function POST(req: Request) {
     content: scripted.prompt,
     options: scripted.options,
     source: apiKey ? "scripted-fallback" : "scripted",
+    debug,
   });
 }
